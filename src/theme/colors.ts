@@ -1,0 +1,17 @@
+export const colors = {
+  background: '#FAFAFA',
+  foreground: '#1E2422',
+  card: '#FFFFFF',
+  primary: '#00674F',
+  primaryForeground: '#FFFFFF',
+  secondary: '#DFF0EB',
+  secondaryForeground: '#004D3B',
+  muted: '#F0F5F3',
+  mutedForeground: '#6C757D',
+  accent: '#FFEEE3',
+  accentForeground: '#7A4A2E',
+  border: '#E6EDEB',
+  ring: '#00674F',
+  incomeText: '#2E7D32',
+  expenseText: '#D9534F',
+} as const;
