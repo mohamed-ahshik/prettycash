@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  iconify-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+  }
+}
+
+  </style>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+    :root {
+      --background: #FAFAFA;
+      --foreground: #1A1A1A;
+      --card: #FFFFFF;
+      --card-foreground: #1A1A1A;
+      --primary: #00674F;
+      --primary-foreground: #FFFFFF;
+      --secondary: #E6F4F1;
+      --secondary-foreground: #004D3B;
+      --muted: #E6F4F1;
+      --muted-foreground: #6C757D;
+      --accent: #E6F4F1;
+      --accent-foreground: #004D3B;
+      --border: #E6E9E8;
+      --ring: #00674F;
+      --frame-font-family: DM Sans, ui-sans-serif, system-ui, sans-serif;
+      --font-sans: var(--frame-font-family);
+    }
+    body {
+      background: var(--background);
+      color: var(--foreground);
+      font-family: var(--frame-font-family);
+    }
+  </style>
+</head>
+<body>
+  <div class="flex min-h-screen flex-col bg-background" style="--background:#FAFAFA; --foreground:#1E2422; --card:#FFFFFF; --card-foreground:#1E2422; --primary:#00674F; --primary-foreground:#FFFFFF; --secondary:#DFF0EB; --secondary-foreground:#004D3B; --muted:#F0F5F3; --muted-foreground:#6C757D; --accent:#FFEEE3; --accent-foreground:#7A4A2E; --border:#E6EDEB; --ring:#00674F; background:#FAFAFA; color:#1E2422">
+<main class="flex-1 px-5 pt-6 pb-32">
+<!-- Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="h-12 w-12 rounded-full flex items-center justify-center font-bold text-[18px]" style="background:#00674F; color:#fff">M</div>
+<div>
+<p class="text-[18px] font-semibold leading-tight text-foreground">Hi Maya!</p>
+<p class="text-[12px] text-muted-foreground font-medium">Tue, Sep 9</p>
+</div>
+</div>
+<div class="hidden" style="display:none"></div>
+</div>
+
+<!-- Month / year dropdown pill centered -->
+<div class="mt-4 flex justify-center">
+<button class="flex items-center gap-2 rounded-full px-4 py-2 bg-card border border-border min-h-[44px]">
+<iconify-icon icon="solar:calendar-bold" class="text-[18px]" style="color:#00674F"></iconify-icon>
+<span class="text-[14px] font-bold text-foreground">September 2026</span>
+<iconify-icon icon="solar:alt-arrow-down-bold" class="text-[18px]" style="color:#00674F"></iconify-icon>
+</button>
+</div>
+
+<!-- Overlapping stack -->
+<div class="relative mt-6">
+<div class="absolute -top-2 left-3 right-3 h-24 rounded-[20px]" style="background:#DFF0EB"></div>
+<div class="absolute -top-1 left-6 right-6 h-24 rounded-[20px]" style="background:#C9E7DE"></div>
+<div class="relative rounded-[20px] bg-card border border-border p-5 overflow-hidden">
+<div class="absolute inset-0 pointer-events-none" style="background-image:radial-gradient(#DFF0EB 2.2px,transparent 2.2px); background-size:18px 18px; opacity:.9; mask-image:linear-gradient(to bottom,black 0%,transparent 70%); -webkit-mask-image:linear-gradient(to bottom,black 0%,transparent 70%)"></div>
+<div class="relative flex items-start justify-between">
+<div>
+<div class="flex items-center gap-1.5">
+<span class="text-[12px] font-medium text-muted-foreground">Total balance</span>
+<iconify-icon icon="solar:eye-bold" class="text-[16px] text-muted-foreground"></iconify-icon>
+</div>
+<p class="text-[32px] font-bold tracking-tight text-foreground mt-1">$4,280.50</p>
+<div class="hidden" style="display:none"></div>
+</div>
+<div class="hidden" style="display:none"></div>
+</div>
+<div class="relative mt-4 flex items-center gap-3 rounded-[16px] p-3" style="background:#F0F5F3">
+<div class="flex-1 flex items-center gap-2.5">
+<div class="h-9 w-9 rounded-full flex items-center justify-center bg-card">
+<iconify-icon icon="solar:arrow-down-left-bold" class="text-[18px]" style="color:#2E7D32"></iconify-icon>
+</div>
+<div>
+<p class="text-[11px] font-medium text-muted-foreground">Income</p>
+<p class="text-[14px] font-bold text-foreground">+$5,200</p>
+</div>
+</div>
+<div class="w-px h-8" style="background:#E6EDEB"></div>
+<div class="flex-1 flex items-center gap-2.5">
+<div class="h-9 w-9 rounded-full flex items-center justify-center bg-card">
+<iconify-icon icon="solar:arrow-up-right-bold" class="text-[18px]" style="color:#D9534F"></iconify-icon>
+</div>
+<div>
+<p class="text-[11px] font-medium text-muted-foreground">Expense</p>
+<p class="text-[14px] font-bold text-foreground">$2,140</p>
+</div>
+</div>
+</div>
+<div class="hidden" style="display:none"></div>
+</div>
+</div>
+
+<!-- Quick actions -->
+<div style="display:none !important; height:0 !important; width:0 !important; overflow:hidden !important" aria-hidden="true" data-deleted="true"></div>
+
+<!-- DAILY TRANSACTIONS -->
+<div class="mt-7 flex items-center justify-between">
+<h2 class="text-[16px] font-bold text-foreground">Daily transactions</h2>
+<span class="text-[13px] font-bold" style="color:#00674F">See all</span>
+</div>
+<div class="mt-3 rounded-[20px] bg-card border border-border px-4 py-2">
+<!-- TODAY -->
+<div class="flex items-center justify-between pt-3 pb-2">
+<p class="text-[12px] font-bold tracking-wide uppercase text-foreground">Today • Sep 9</p>
+<p class="text-[12px] font-bold text-foreground">-$86.40</p>
+</div>
+<div class="flex items-center gap-3 py-3 border-t border-border">
+<div class="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style="background:#DFF0EB"><iconify-icon icon="solar:cart-large-2-bold" class="text-[20px]" style="color:#00674F"></iconify-icon></div>
+<div class="flex-1 min-w-0"><p class="text-[14px] font-semibold text-foreground truncate">Whole Foods Market</p><p class="text-[12px] text-muted-foreground">9:42 AM • Food</p></div>
+<p class="text-[14px] font-bold text-foreground">-$86.40</p>
+</div>
+<div class="flex items-center gap-3 py-3 border-t border-border">
+<div class="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style="background:#E8EFFD"><iconify-icon icon="solar:car-bold" class="text-[20px]" style="color:#3B5BDB"></iconify-icon></div>
+<div class="flex-1 min-w-0"><p class="text-[14px] font-semibold text-foreground truncate">Uber</p><p class="text-[12px] text-muted-foreground">8:15 AM • Travel</p></div>
+<p class="text-[14px] font-bold text-foreground">-$24.80</p>
+</div>
+<!-- YESTERDAY -->
+<div class="flex items-center justify-between pt-4 pb-2">
+<p class="text-[12px] font-bold tracking-wide uppercase text-foreground">Yesterday • Sep 8</p>
+<p class="text-[12px] font-bold text-foreground">-$22.19</p>
+</div>
+<div class="flex items-center gap-3 py-3 border-t border-border">
+<div class="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style="background:#FFEEE3"><iconify-icon icon="solar:play-bold" class="text-[20px]" style="color:#E67E22"></iconify-icon></div>
+<div class="flex-1 min-w-0"><p class="text-[14px] font-semibold text-foreground truncate">Netflix</p><p class="text-[12px] text-muted-foreground">7:30 PM • Fun</p></div>
+<p class="text-[14px] font-bold text-foreground">-$15.99</p>
+</div>
+<div class="flex items-center gap-3 py-3 border-t border-border">
+<div class="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style="background:#FFF4D6"><iconify-icon icon="solar:cup-hot-bold" class="text-[20px]" style="color:#9C7A00"></iconify-icon></div>
+<div class="flex-1 min-w-0"><p class="text-[14px] font-semibold text-foreground truncate">Coffee Run</p><p class="text-[12px] text-muted-foreground">8:05 AM • Food</p></div>
+<p class="text-[14px] font-bold text-foreground">-$6.20</p>
+</div>
+<!-- SEP 1 -->
+<div class="flex items-center justify-between pt-4 pb-2">
+<p class="text-[12px] font-bold tracking-wide uppercase text-foreground">Sep 1</p>
+<p class="text-[12px] font-bold" style="color:#2E7D32">+$5,200.00</p>
+</div>
+<div class="flex items-center gap-3 py-3 border-t border-border">
+<div class="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style="background:#E8F5E9"><iconify-icon icon="solar:case-round-bold" class="text-[20px]" style="color:#2E7D32"></iconify-icon></div>
+<div class="flex-1 min-w-0"><p class="text-[14px] font-semibold text-foreground truncate">Salary September</p><p class="text-[12px] text-muted-foreground">9:00 AM • Income</p></div>
+<p class="text-[14px] font-bold" style="color:#2E7D32">+$5,200</p>
+</div>
+</div>
+
+<!-- My budgets -->
+<div class="mt-7 flex items-center justify-between">
+<div class="hidden" style="display:none"></div>
+<span class="text-[13px] font-semibold hidden" style="color:#00674F; display:none" data-tapui-picked-element="hover"></span>
+</div>
+<div class="mt-3 grid grid-cols-2 gap-3">
+<div class="hidden"></div>
+<div style="display:none"></div>
+<div class="hidden" style="display:none"></div>
+<div style="display:none" aria-hidden="true"></div>
+</div>
+</main>
+<div class="fixed bottom-5 left-5 right-5 z-10">
+<div class="flex items-center justify-around rounded-full px-2 py-2 bg-card border border-border">
+<button class="flex flex-col items-center gap-0.5 w-[56px] h-[48px] justify-center"><iconify-icon icon="solar:home-2-bold" class="text-[22px]" style="color:#00674F"></iconify-icon><span class="text-[10px] font-bold" style="color:#00674F">Home</span></button>
+<button class="flex flex-col items-center gap-0.5 w-[56px] h-[48px] justify-center"><iconify-icon icon="solar:pie-chart-linear" class="text-[22px] text-muted-foreground"></iconify-icon><span class="text-[10px] font-medium text-muted-foreground">Insights</span></button>
+<button class="h-[56px] w-[56px] -mt-8 rounded-full flex items-center justify-center border-4" style="background:#004D3B; color:#fff; border-color:#FAFAFA"><iconify-icon icon="solar:add-circle-linear" class="text-[28px]"></iconify-icon></button>
+<button class="flex flex-col items-center gap-0.5 w-[56px] h-[48px] justify-center"><iconify-icon icon="solar:wallet-linear" class="text-[22px] text-muted-foreground"></iconify-icon><span class="text-[10px] font-medium text-muted-foreground">Wallets</span></button>
+<button class="flex flex-col items-center gap-0.5 w-[56px] h-[48px] justify-center"><iconify-icon icon="solar:user-linear" class="text-[22px] text-muted-foreground"></iconify-icon><span class="text-[10px] font-medium text-muted-foreground">Profile</span></button>
+</div>
+</div>
+</div>
+  <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
+</body>
+</html>
