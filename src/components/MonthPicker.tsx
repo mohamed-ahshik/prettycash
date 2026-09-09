@@ -1,0 +1,41 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { colors, fonts, radii } from '../theme';
+import { Icon } from './Icon';
+
+interface MonthPickerProps {
+  month: string;
+}
+
+export function MonthPicker({ month }: MonthPickerProps) {
+  return (
+    <Pressable style={styles.pill}>
+      <Icon name="calendar" size={18} color={colors.primary} />
+      <Text style={styles.label}>{month}</Text>
+      <Icon name="chevron-down" size={18} color={colors.primary} />
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'center',
+    marginTop: 16,
+    borderRadius: radii.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minHeight: 44,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
+    color: colors.foreground,
+  },
+});
