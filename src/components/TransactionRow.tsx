@@ -21,7 +21,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{transaction.name}</Text>
-        <Text style={styles.meta}>{transaction.time} • {transaction.category}</Text>
+        <Text style={styles.meta}>{transaction.time} • {category.label}</Text>
       </View>
       <Text style={[styles.amount, { color: amountColor }]}>
         {formatSignedAmount(transaction.type, transaction.amount)}

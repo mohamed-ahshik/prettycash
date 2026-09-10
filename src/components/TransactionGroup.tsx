@@ -10,6 +10,10 @@ interface TransactionGroupProps {
 }
 
 export function TransactionGroup({ group }: TransactionGroupProps) {
+  if (group.transactions.length === 0) {
+    return null;
+  }
+
   const totalColor = group.total >= 0 ? colors.incomeText : colors.foreground;
 
   return (
