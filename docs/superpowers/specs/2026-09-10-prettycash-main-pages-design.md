@@ -2,7 +2,7 @@
 
 Date: 2026-09-10
 Status: Approved for implementation
-Implementation status: In progress
+Implementation status: Implemented — main pages complete
 
 ## Overview
 
