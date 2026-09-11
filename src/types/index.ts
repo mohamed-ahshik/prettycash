@@ -17,3 +17,5 @@ export interface TransactionGroup {
   total: number;
   transactions: Transaction[];
 }
+
+export * from './category';

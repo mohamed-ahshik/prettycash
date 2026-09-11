@@ -7,10 +7,10 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
+import { CategoriesScreen } from './src/screens/CategoriesScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { WalletsScreen } from './src/screens/WalletsScreen';
 import { colors } from './src/theme';
 
 const Tab = createBottomTabNavigator();
@@ -38,7 +38,7 @@ export default function App() {
       >
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Insights" component={InsightsScreen} />
-        <Tab.Screen name="Wallets" component={WalletsScreen} />
+        <Tab.Screen name="Categories" component={CategoriesScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
     </NavigationContainer>
@@ -75,4 +75,3 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
   },
 });
-

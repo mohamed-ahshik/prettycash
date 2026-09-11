@@ -5,12 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, radii } from '../theme';
 import { Icon } from './Icon';
 
-type TabName = 'Home' | 'Insights' | 'Wallets' | 'Profile';
+type TabName = 'Home' | 'Insights' | 'Categories' | 'Profile';
 
 const TAB_ICONS: Record<TabName, { active: string; inactive: string }> = {
   Home: { active: 'home', inactive: 'home-outline' },
   Insights: { active: 'chart-pie', inactive: 'chart-pie' },
-  Wallets: { active: 'wallet', inactive: 'wallet-outline' },
+  Categories: { active: 'shape', inactive: 'shape-outline' },
   Profile: { active: 'account', inactive: 'account-outline' },
 };
 
@@ -64,7 +64,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           <Icon name="plus" size={28} color={colors.primaryForeground} />
         </Pressable>
       </View>
-      {renderTab('Wallets')}
+      {renderTab('Categories')}
       {renderTab('Profile')}
     </View>
   );

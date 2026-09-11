@@ -29,7 +29,7 @@
 **Interfaces:**
 - Produces: `CategoryItem`, `CategoryType`, `INITIAL_EXPENSE_CATEGORIES`, `INITIAL_INCOME_CATEGORIES`, `PRESET_CATEGORY_COLORS`, `PRESET_CATEGORY_ICONS`.
 
-- [ ] **Step 1: Create `src/types/category.ts`**
+- [x] **Step 1: Create `src/types/category.ts`**
 
 ```ts
 export type CategoryType = 'expense' | 'income';
@@ -50,14 +50,14 @@ export interface PresetColor {
 }
 ```
 
-- [ ] **Step 2: Export from `src/types/index.ts`**
+- [x] **Step 2: Export from `src/types/index.ts`**
 
 Add re-export to `src/types/index.ts`:
 ```ts
 export * from './category';
 ```
 
-- [ ] **Step 3: Create `src/data/categoriesData.ts`**
+- [x] **Step 3: Create `src/data/categoriesData.ts`**
 
 ```ts
 import { CategoryItem, PresetColor } from '../types';
@@ -105,12 +105,12 @@ export const INITIAL_INCOME_CATEGORIES: CategoryItem[] = [
 ];
 ```
 
-- [ ] **Step 4: Verify type-check**
+- [x] **Step 4: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/types src/data/categoriesData.ts
@@ -129,7 +129,7 @@ git commit -m "feat: add category types and initial dataset"
 - Consumes: `CategoryItem`, `CategoryType` from `src/types`; theme tokens from `src/theme`; `Icon` component.
 - Produces: `<SegmentedControl selected onSelect />`, `<CategoryRow item />`.
 
-- [ ] **Step 1: Create `src/components/SegmentedControl.tsx`**
+- [x] **Step 1: Create `src/components/SegmentedControl.tsx`**
 
 ```tsx
 import React from 'react';
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Create `src/components/CategoryRow.tsx`**
+- [x] **Step 2: Create `src/components/CategoryRow.tsx`**
 
 ```tsx
 import React from 'react';
@@ -271,12 +271,12 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Verify type-check**
+- [x] **Step 3: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/SegmentedControl.tsx src/components/CategoryRow.tsx
@@ -294,7 +294,7 @@ git commit -m "feat: add SegmentedControl and CategoryRow components"
 - Consumes: `CategoryItem`, `CategoryType`, `PRESET_CATEGORY_COLORS`, `PRESET_CATEGORY_ICONS` from `src/types` and `src/data/categoriesData`; `colors`, `fonts`, `radii` from `src/theme`; `Icon`.
 - Produces: `<AddCategoryModal visible type onClose onSave />`.
 
-- [ ] **Step 1: Create `src/components/AddCategoryModal.tsx`**
+- [x] **Step 1: Create `src/components/AddCategoryModal.tsx`**
 
 ```tsx
 import React, { useState } from 'react';
@@ -562,12 +562,12 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Verify type-check**
+- [x] **Step 2: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/AddCategoryModal.tsx
@@ -589,7 +589,7 @@ git commit -m "feat: add AddCategoryModal component"
 - Consumes: `SegmentedControl`, `CategoryRow`, `AddCategoryModal`; `INITIAL_EXPENSE_CATEGORIES`, `INITIAL_INCOME_CATEGORIES`.
 - Produces: `<CategoriesScreen />` wired into `App.tsx` tab navigation.
 
-- [ ] **Step 1: Create `src/screens/CategoriesScreen.tsx`**
+- [x] **Step 1: Create `src/screens/CategoriesScreen.tsx`**
 
 ```tsx
 import React, { useState } from 'react';
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Update `src/components/TabBar.tsx`**
+- [x] **Step 2: Update `src/components/TabBar.tsx`**
 
 Replace `Wallets` with `Categories` and use `shape` / `shape-outline` icons:
 ```tsx
@@ -715,7 +715,7 @@ const TAB_ICONS: Record<TabName, { active: string; inactive: string }> = {
 And inside `TabBar`:
 Replace `{renderTab('Wallets')}` with `{renderTab('Categories')}`.
 
-- [ ] **Step 3: Update `App.tsx` and delete `WalletsScreen.tsx`**
+- [x] **Step 3: Update `App.tsx` and delete `WalletsScreen.tsx`**
 
 1. In `App.tsx`, replace `import { WalletsScreen } from './src/screens/WalletsScreen';` with:
 ```tsx
@@ -727,11 +727,11 @@ import { CategoriesScreen } from './src/screens/CategoriesScreen';
 ```
 3. Remove `src/screens/WalletsScreen.tsx`.
 
-- [ ] **Step 4: Update spec implementation status**
+- [x] **Step 4: Update spec implementation status**
 
 In `docs/superpowers/specs/2026-09-12-categories-screen-design.md`, set `Implementation status:` to `Implemented`.
 
-- [ ] **Step 5: Verify type-check & Android bundle**
+- [x] **Step 5: Verify type-check & Android bundle**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
@@ -739,7 +739,7 @@ Expected: no errors.
 Run: `npx expo export --platform android`
 Expected: bundles successfully without errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git rm src/screens/WalletsScreen.tsx
