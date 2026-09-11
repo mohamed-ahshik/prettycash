@@ -24,10 +24,11 @@
 **Files:**
 - Create: `src/types/insights.ts`
 - Modify: `src/types/index.ts`
+- Create: `src/context/CategoriesContext.tsx`
 - Create: `src/utils/insights.ts`
 
 **Interfaces:**
-- Produces: `CategoryBreakdownItem`, `InsightsData`, `computeInsightsData(type, month, year)`.
+- Produces: `CategoryBreakdownItem`, `InsightsData`, `CategoriesContext`, `useCategories()`, `getInsightsData(type, categories)`.
 
 - [ ] **Step 1: Create `src/types/insights.ts`**
 
@@ -56,67 +57,107 @@ Add to `src/types/index.ts`:
 export * from './insights';
 ```
 
-- [ ] **Step 3: Create `src/utils/insights.ts`**
+- [ ] **Step 3: Create `src/context/CategoriesContext.tsx`**
+
+Provides shared categories between the Categories tab and Insights tab:
+
+```tsx
+import React, { createContext, useContext, useState } from 'react';
+import { CategoryItem } from '../types';
+
+export const DEFAULT_EXPENSE_CATEGORIES: CategoryItem[] = [
+  { id: 'exp-food', name: 'Food', type: 'expense', icon: 'silverware-fork-knife', colorBg: '#FFF4D6', colorFg: '#FFB800', notes: 'Groceries & dining' },
+  { id: 'exp-shopping', name: 'Shopping', type: 'expense', icon: 'bag-personal-outline', colorBg: '#E0F2FE', colorFg: '#00B4D8', notes: 'Personal items & gear' },
+  { id: 'exp-drinks', name: 'Drinks', type: 'expense', icon: 'glass-wine', colorBg: '#DFF0EB', colorFg: '#2EC4B6', notes: 'Cafes & drinks' },
+  { id: 'exp-travel', name: 'Travel', type: 'expense', icon: 'car-outline', colorBg: '#E8EFFD', colorFg: '#3B5BDB', notes: 'Commute & transit' },
+  { id: 'exp-fun', name: 'Fun', type: 'expense', icon: 'play', colorBg: '#FFEEE3', colorFg: '#E67E22', notes: 'Movies & subscriptions' },
+  { id: 'exp-bills', name: 'Bills', type: 'expense', icon: 'file-document-outline', colorBg: '#F3E8FF', colorFg: '#7C3AED', notes: 'Utilities & rent' },
+];
+
+export const DEFAULT_INCOME_CATEGORIES: CategoryItem[] = [
+  { id: 'inc-salary', name: 'Salary', type: 'income', icon: 'briefcase-outline', colorBg: '#E8F5E9', colorFg: '#2E7D32', notes: 'Monthly payroll' },
+  { id: 'inc-freelance', name: 'Freelance', type: 'income', icon: 'laptop', colorBg: '#E0F2FE', colorFg: '#0284C7', notes: 'Client contracts & gigs' },
+  { id: 'inc-investments', name: 'Investments', type: 'income', icon: 'chart-line', colorBg: '#FEF3C7', colorFg: '#D97706', notes: 'Dividends & capital gains' },
+  { id: 'inc-gifts', name: 'Gifts', type: 'income', icon: 'gift-outline', colorBg: '#FFE4E6', colorFg: '#E11D48', notes: 'Occasions & bonuses' },
+];
+
+interface CategoriesContextType {
+  expenseCategories: CategoryItem[];
+  incomeCategories: CategoryItem[];
+  addCategory: (item: Omit<CategoryItem, 'id'>) => void;
+}
+
+const CategoriesContext = createContext<CategoriesContextType | undefined>(undefined);
+
+export function CategoriesProvider({ children }: { children: React.ReactNode }) {
+  const [expenseCategories, setExpenseCategories] = useState<CategoryItem[]>(DEFAULT_EXPENSE_CATEGORIES);
+  const [incomeCategories, setIncomeCategories] = useState<CategoryItem[]>(DEFAULT_INCOME_CATEGORIES);
+
+  const addCategory = (item: Omit<CategoryItem, 'id'>) => {
+    const newItem: CategoryItem = {
+      ...item,
+      id: `${item.type}-${Date.now()}`,
+    };
+    if (item.type === 'expense') {
+      setExpenseCategories((prev) => [newItem, ...prev]);
+    } else {
+      setIncomeCategories((prev) => [newItem, ...prev]);
+    }
+  };
+
+  return (
+    <CategoriesContext.Provider value={{ expenseCategories, incomeCategories, addCategory }}>
+      {children}
+    </CategoriesContext.Provider>
+  );
+}
+
+export function useCategories() {
+  const ctx = useContext(CategoriesContext);
+  if (!ctx) {
+    throw new Error('useCategories must be used within CategoriesProvider');
+  }
+  return ctx;
+}
+```
+
+- [ ] **Step 4: Create `src/utils/insights.ts`**
+
+Calculate breakdown items dynamically using the exact categories from `CategoriesContext`:
 
 ```ts
-import { CategoryBreakdownItem, InsightsData } from '../types';
+import { CategoryBreakdownItem, CategoryItem, InsightsData } from '../types';
 
-export const SAMPLE_EXPENSE_INSIGHTS: CategoryBreakdownItem[] = [
-  {
-    id: 'exp-food',
-    name: 'Food',
-    amount: 36.75,
-    percentage: 82.3,
-    icon: 'silverware-fork-knife',
-    color: '#FFB800',
-    bgColor: '#FFF4D6',
-  },
-  {
-    id: 'exp-shopping',
-    name: 'Shopping',
-    amount: 5.79,
-    percentage: 13.0,
-    icon: 'bag-personal-outline',
-    color: '#00B4D8',
-    bgColor: '#E0F2FE',
-  },
-  {
-    id: 'exp-drinks',
-    name: 'Drinks',
-    amount: 2.1,
-    percentage: 4.7,
-    icon: 'glass-wine',
-    color: '#2EC4B6',
-    bgColor: '#DFF0EB',
-  },
-];
+export function getInsightsData(
+  type: 'expense' | 'income',
+  categories: CategoryItem[]
+): InsightsData {
+  // Weights matching the screenshot proportions for sample demonstration
+  const sampleWeights = [0.823, 0.13, 0.047, 0.03, 0.02];
+  const baseTotal = type === 'expense' ? 44.64 : 6000.0;
 
-export const SAMPLE_INCOME_INSIGHTS: CategoryBreakdownItem[] = [
-  {
-    id: 'inc-salary',
-    name: 'Salary',
-    amount: 5200.0,
-    percentage: 86.7,
-    icon: 'briefcase-outline',
-    color: '#2E7D32',
-    bgColor: '#E8F5E9',
-  },
-  {
-    id: 'inc-freelance',
-    name: 'Freelance',
-    amount: 800.0,
-    percentage: 13.3,
-    icon: 'laptop',
-    color: '#0284C7',
-    bgColor: '#E0F2FE',
-  },
-];
+  // Map each active category from Categories tab into an insights breakdown item
+  const items: CategoryBreakdownItem[] = categories.map((cat, index) => {
+    const weight = index < sampleWeights.length ? sampleWeights[index] : 0.01;
+    const amount = Number((baseTotal * weight).toFixed(2));
+    const percentage = Number((weight * 100).toFixed(1));
 
-export function getInsightsData(type: 'expense' | 'income'): InsightsData {
-  const items = type === 'expense' ? SAMPLE_EXPENSE_INSIGHTS : SAMPLE_INCOME_INSIGHTS;
+    return {
+      id: cat.id,
+      name: cat.name,
+      amount,
+      percentage,
+      icon: cat.icon,
+      color: cat.colorFg,
+      bgColor: cat.colorBg,
+    };
+  });
+
+  // Calculate actual sum
   const total = items.reduce((acc, curr) => acc + curr.amount, 0);
+
   return {
-    total,
+    total: Number(total.toFixed(2)),
     type,
     items,
   };
@@ -659,11 +700,12 @@ git commit -m "feat: add BreakdownRow and BreakdownCard components with progress
 
 **Files:**
 - Modify: `src/screens/InsightsScreen.tsx`
+- Modify: `App.tsx`
 - Modify: `docs/superpowers/specs/2026-09-12-insights-screen-design.md` (Update Implementation status)
 
 **Interfaces:**
-- Consumes: `DonutChart`, `BreakdownCard`, `MonthYearPickerModal`, `getInsightsData`, `MONTH_NAMES`.
-- Produces: Complete `<InsightsScreen />`.
+- Consumes: `DonutChart`, `BreakdownCard`, `MonthYearPickerModal`, `getInsightsData`, `MONTH_NAMES`, `useCategories`, `CategoriesProvider`.
+- Produces: Complete `<InsightsScreen />` consuming shared categories.
 
 - [ ] **Step 1: Replace `src/screens/InsightsScreen.tsx`**
 
@@ -676,17 +718,21 @@ import { BreakdownCard } from '../components/BreakdownCard';
 import { DonutChart } from '../components/DonutChart';
 import { Icon } from '../components/Icon';
 import { MONTH_NAMES, MonthYearPickerModal } from '../components/MonthYearPickerModal';
+import { useCategories } from '../context/CategoriesContext';
 import { colors, fonts } from '../theme';
 import { getInsightsData } from '../utils/insights';
 
 export function InsightsScreen() {
   const navigation = useNavigation<any>();
+  const { expenseCategories, incomeCategories } = useCategories();
   const [selectedMonth, setSelectedMonth] = useState(8); // Sept (0-indexed)
   const [selectedYear, setSelectedYear] = useState(2026);
   const [activeType, setActiveType] = useState<'expense' | 'income'>('expense');
   const [pickerVisible, setPickerVisible] = useState(false);
 
-  const insightsData = getInsightsData(activeType);
+  // Sourced directly from Categories context
+  const activeCategories = activeType === 'expense' ? expenseCategories : incomeCategories;
+  const insightsData = getInsightsData(activeType, activeCategories);
 
   const toggleType = () => {
     setActiveType((prev) => (prev === 'expense' ? 'income' : 'expense'));
@@ -779,11 +825,32 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Update spec implementation status**
+- [ ] **Step 2: Wrap App with `CategoriesProvider` in `App.tsx`**
+
+In `App.tsx`, import `CategoriesProvider` from `./src/context/CategoriesContext` and wrap the app content:
+```tsx
+import { CategoriesProvider } from './src/context/CategoriesContext';
+...
+  return (
+    <SafeAreaProvider>
+      <CategoriesProvider>
+        {Platform.OS === 'web' ? (
+          <View style={styles.webOuter}>
+            <View style={styles.phoneFrame}>{content}</View>
+          </View>
+        ) : (
+          content
+        )}
+      </CategoriesProvider>
+    </SafeAreaProvider>
+  );
+```
+
+- [ ] **Step 3: Update spec implementation status**
 
 In `docs/superpowers/specs/2026-09-12-insights-screen-design.md`, set `Implementation status:` to `Implemented`.
 
-- [ ] **Step 3: Verify type-check & Android bundle export**
+- [ ] **Step 4: Verify type-check & Android bundle export**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
@@ -791,9 +858,9 @@ Expected: no errors.
 Run: `npx expo export --platform android`
 Expected: bundles successfully without errors.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/screens/InsightsScreen.tsx docs/superpowers/specs/2026-09-12-insights-screen-design.md
-git commit -m "feat: implement Insights screen with donut chart, progress bars, and month picker"
+git add src/screens/InsightsScreen.tsx App.tsx docs/superpowers/specs/2026-09-12-insights-screen-design.md
+git commit -m "feat: implement Insights screen with shared categories context and donut chart"
 ```

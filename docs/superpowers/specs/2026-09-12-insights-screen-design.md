@@ -84,11 +84,16 @@ export interface InsightsData {
 }
 ```
 
-### 4.2 Calculation Logic
-1. Filter transactions by selected month/year and active type (`expense` vs `income`).
-2. Group transactions by category and sum up amounts.
+### 4.2 Categories Source & Shared Context
+The categories displayed in the Insights breakdown are **sourced directly from the Categories tab** via a shared `CategoriesContext` (`src/context/CategoriesContext.tsx`).
+- Whenever a user adds or modifies categories in the Categories tab, the Insights screen immediately reflects those same categories.
+- For each category defined in the Categories tab, Insights aggregates the matching transactions (or allocates sample amounts for visualization) using that category's specific name, icon, color, and background tint.
+
+### 4.3 Calculation Logic
+1. Retrieve active categories from `CategoriesContext` filtered by the active view type (`expense` vs `income`).
+2. Aggregate amounts for each active category for the selected month/year.
 3. Compute total amount and percentage share for each category (`(categoryTotal / grandTotal) * 100`).
-4. Fallback sample data: When the selected month has no user transactions, provide rich realistic sample datasets for demonstration matching the reference image ($44.64 total: Food 82.3% / $36.75, Shopping 13% / $5.79, Drinks 4.7% / $2.10).
+4. Fallback: If no transactions exist for the selected month, proportional demo allocations are generated across the categories defined in the Categories tab so the chart always displays a realistic breakdown.
 
 ---
 
