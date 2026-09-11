@@ -19,3 +19,4 @@ export interface TransactionGroup {
 }
 
 export * from './category';
+export * from './insights';

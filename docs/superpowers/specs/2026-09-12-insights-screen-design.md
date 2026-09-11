@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-12  
 **Status:** Approved for implementation  
-**Implementation status:** Not started  
+**Implementation status:** Implemented  
 
 ---
 

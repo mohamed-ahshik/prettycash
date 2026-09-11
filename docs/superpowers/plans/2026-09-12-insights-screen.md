@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces: `CategoryBreakdownItem`, `InsightsData`, `CategoriesContext`, `useCategories()`, `getInsightsData(type, categories)`.
 
-- [ ] **Step 1: Create `src/types/insights.ts`**
+- [x] **Step 1: Create `src/types/insights.ts`**
 
 ```ts
 export interface CategoryBreakdownItem {
@@ -50,14 +50,14 @@ export interface InsightsData {
 }
 ```
 
-- [ ] **Step 2: Export from `src/types/index.ts`**
+- [x] **Step 2: Export from `src/types/index.ts`**
 
 Add to `src/types/index.ts`:
 ```ts
 export * from './insights';
 ```
 
-- [ ] **Step 3: Create `src/context/CategoriesContext.tsx`**
+- [x] **Step 3: Create `src/context/CategoriesContext.tsx`**
 
 Provides shared categories between the Categories tab and Insights tab:
 
@@ -121,7 +121,7 @@ export function useCategories() {
 }
 ```
 
-- [ ] **Step 4: Create `src/utils/insights.ts`**
+- [x] **Step 4: Create `src/utils/insights.ts`**
 
 Calculate breakdown items dynamically using the exact categories from `CategoriesContext`:
 
@@ -164,12 +164,12 @@ export function getInsightsData(
 }
 ```
 
-- [ ] **Step 4: Verify type-check**
+- [x] **Step 4: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/types src/utils/insights.ts
@@ -186,7 +186,7 @@ git commit -m "feat: add insights types and calculation utilities"
 **Interfaces:**
 - Produces: `<MonthYearPickerModal visible month year onClose onSelect />`.
 
-- [ ] **Step 1: Create `src/components/MonthYearPickerModal.tsx`**
+- [x] **Step 1: Create `src/components/MonthYearPickerModal.tsx`**
 
 ```tsx
 import React, { useState } from 'react';
@@ -326,12 +326,12 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Verify type-check**
+- [x] **Step 2: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/MonthYearPickerModal.tsx
@@ -349,7 +349,7 @@ git commit -m "feat: add MonthYearPickerModal component"
 - Consumes: `CategoryBreakdownItem` from `src/types`; `colors`, `fonts` from `src/theme`; `Icon`; `react-native-svg`.
 - Produces: `<DonutChart items total type onToggleType />`.
 
-- [ ] **Step 1: Create `src/components/DonutChart.tsx`**
+- [x] **Step 1: Create `src/components/DonutChart.tsx`**
 
 ```tsx
 import React from 'react';
@@ -511,12 +511,12 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Verify type-check**
+- [x] **Step 2: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/DonutChart.tsx
@@ -535,7 +535,7 @@ git commit -m "feat: add interactive SVG DonutChart component with center toggle
 - Consumes: `CategoryBreakdownItem` from `src/types`; `colors`, `fonts` from `src/theme`; `Icon`.
 - Produces: `<BreakdownRow item />`, `<BreakdownCard items type />`.
 
-- [ ] **Step 1: Create `src/components/BreakdownRow.tsx`**
+- [x] **Step 1: Create `src/components/BreakdownRow.tsx`**
 
 ```tsx
 import React from 'react';
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Create `src/components/BreakdownCard.tsx`**
+- [x] **Step 2: Create `src/components/BreakdownCard.tsx`**
 
 ```tsx
 import React from 'react';
@@ -682,12 +682,12 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Verify type-check**
+- [x] **Step 3: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/BreakdownRow.tsx src/components/BreakdownCard.tsx
@@ -707,7 +707,7 @@ git commit -m "feat: add BreakdownRow and BreakdownCard components with progress
 - Consumes: `DonutChart`, `BreakdownCard`, `MonthYearPickerModal`, `getInsightsData`, `MONTH_NAMES`, `useCategories`, `CategoriesProvider`.
 - Produces: Complete `<InsightsScreen />` consuming shared categories.
 
-- [ ] **Step 1: Replace `src/screens/InsightsScreen.tsx`**
+- [x] **Step 1: Replace `src/screens/InsightsScreen.tsx`**
 
 ```tsx
 import { useNavigation } from '@react-navigation/native';
@@ -825,7 +825,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Wrap App with `CategoriesProvider` in `App.tsx`**
+- [x] **Step 2: Wrap App with `CategoriesProvider` in `App.tsx`**
 
 In `App.tsx`, import `CategoriesProvider` from `./src/context/CategoriesContext` and wrap the app content:
 ```tsx
@@ -846,11 +846,11 @@ import { CategoriesProvider } from './src/context/CategoriesContext';
   );
 ```
 
-- [ ] **Step 3: Update spec implementation status**
+- [x] **Step 3: Update spec implementation status**
 
 In `docs/superpowers/specs/2026-09-12-insights-screen-design.md`, set `Implementation status:` to `Implemented`.
 
-- [ ] **Step 4: Verify type-check & Android bundle export**
+- [x] **Step 4: Verify type-check & Android bundle export**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
@@ -858,7 +858,7 @@ Expected: no errors.
 Run: `npx expo export --platform android`
 Expected: bundles successfully without errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/screens/InsightsScreen.tsx App.tsx docs/superpowers/specs/2026-09-12-insights-screen-design.md
