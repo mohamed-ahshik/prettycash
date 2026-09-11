@@ -53,7 +53,7 @@ Replace the placeholder "Wallets" tab with a fully designed **Categories** scree
   - Fun (`play`, `#FFEEE3` / `#E67E22`, notes: "Movies & subscriptions")
   - Coffee (`coffee-outline`, `#FFF4D6` / `#9C7A00`, notes: "Cafes & quick bites")
   - Bills (`file-document-outline`, `#F3E8FF` / `#7C3AED`, notes: "Utilities & rent")
-  - Shopping (`bag-handle-outline`, `#FCE7F3` / `#DB2777`, notes: "Personal items & gear")
+  - Shopping (`bag-personal-outline`, `#FCE7F3` / `#DB2777`, notes: "Personal items & gear")
 - **Income Categories:**
   - Salary (`briefcase-outline`, `#E8F5E9` / `#2E7D32`, notes: "Monthly payroll")
   - Freelance (`laptop`, `#E0F2FE` / `#0284C7`, notes: "Client contracts & gigs")
@@ -65,7 +65,8 @@ Replace the placeholder "Wallets" tab with a fully designed **Categories** scree
 ## 4. "Add Category" Modal Specification
 
 ### 4.1 Modal Layout
-- Bottom sheet or slide-up modal with semi-transparent overlay (`rgba(0,0,0,0.5)`).
+- Bottom sheet or slide-up modal with semi-transparent overlay (`rgba(0,0,0,0.45)`).
+- Centered on web viewports with `maxWidth: 430` to match phone frame styling.
 - Top bar with "Add Category" title, active type indicator ("for Expense" or "for Income"), and a close icon button (`close`).
 
 ### 4.2 Form Fields
@@ -76,7 +77,7 @@ Replace the placeholder "Wallets" tab with a fully designed **Categories** scree
    - Multiline text input (min-height 60), rounded-12, background `#FAFAFA`.
    - Placeholder: "Notes (optional, e.g. monthly budget notes)".
 3. **Icon Selector:**
-   - Horizontal scrolling or grid of 8 selectable icons: `cart-outline`, `car-outline`, `coffee-outline`, `play`, `briefcase-outline`, `laptop`, `chart-line`, `gift-outline`, `home-outline`, `medical-bag`.
+   - Horizontal scrolling or grid of selectable icons: `cart-outline`, `car-outline`, `coffee-outline`, `play`, `file-document-outline`, `bag-personal-outline`, `briefcase-outline`, `laptop`, `chart-line`, `gift-outline`, `home-outline`, `medical-bag`.
    - Selected icon has ring `#00674F` and primary tint.
 4. **Color Palette Selector:**
    - Row of 5 selectable color chips (`#DFF0EB`, `#E8EFFD`, `#FFEEE3`, `#FFF4D6`, `#E8F5E9`, `#F3E8FF`).

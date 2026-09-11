@@ -17,7 +17,7 @@ export const PRESET_CATEGORY_ICONS: string[] = [
   'coffee-outline',
   'play',
   'file-document-outline',
-  'bag-handle-outline',
+  'bag-personal-outline',
   'briefcase-outline',
   'laptop',
   'chart-line',
@@ -32,7 +32,7 @@ export const INITIAL_EXPENSE_CATEGORIES: CategoryItem[] = [
   { id: 'exp-3', name: 'Fun', type: 'expense', icon: 'play', colorBg: '#FFEEE3', colorFg: '#E67E22', notes: 'Movies & subscriptions' },
   { id: 'exp-4', name: 'Coffee', type: 'expense', icon: 'coffee-outline', colorBg: '#FFF4D6', colorFg: '#9C7A00', notes: 'Cafes & quick bites' },
   { id: 'exp-5', name: 'Bills', type: 'expense', icon: 'file-document-outline', colorBg: '#F3E8FF', colorFg: '#7C3AED', notes: 'Utilities & rent' },
-  { id: 'exp-6', name: 'Shopping', type: 'expense', icon: 'bag-handle-outline', colorBg: '#FCE7F3', colorFg: '#DB2777', notes: 'Personal items & gear' },
+  { id: 'exp-6', name: 'Shopping', type: 'expense', icon: 'bag-personal-outline', colorBg: '#FCE7F3', colorFg: '#DB2777', notes: 'Personal items & gear' },
 ];
 
 export const INITIAL_INCOME_CATEGORIES: CategoryItem[] = [

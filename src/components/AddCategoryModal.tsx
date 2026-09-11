@@ -148,9 +148,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   dismissOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
   },
   modalCard: {
     backgroundColor: colors.card,
@@ -160,6 +161,8 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 32,
     maxHeight: '85%',
+    width: '100%',
+    maxWidth: 430,
   },
   header: {
     flexDirection: 'row',

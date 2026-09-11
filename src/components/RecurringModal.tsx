@@ -112,9 +112,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   dismissOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
   },
   sheetCard: {
     backgroundColor: colors.card,
@@ -124,6 +125,8 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 36,
     maxHeight: '85%',
+    width: '100%',
+    maxWidth: 430,
   },
   topBar: {
     flexDirection: 'row',
