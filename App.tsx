@@ -4,12 +4,14 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { WalletsScreen } from './src/screens/WalletsScreen';
+import { colors } from './src/theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -25,22 +27,52 @@ export default function App() {
     return null;
   }
 
+  const content = (
+    <NavigationContainer>
+      <StatusBar style="dark" />
+      <Tab.Navigator
+        tabBar={(props) => <TabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Insights" component={InsightsScreen} />
+        <Tab.Screen name="Wallets" component={WalletsScreen} />
+        <Tab.Screen name="Profile" component={ProfileScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
+  );
+
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <Tab.Navigator
-          tabBar={(props) => <TabBar {...props} />}
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
-          <Tab.Screen name="Home" component={HomeScreen} />
-          <Tab.Screen name="Insights" component={InsightsScreen} />
-          <Tab.Screen name="Wallets" component={WalletsScreen} />
-          <Tab.Screen name="Profile" component={ProfileScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
+      {Platform.OS === 'web' ? (
+        <View style={styles.webOuter}>
+          <View style={styles.phoneFrame}>{content}</View>
+        </View>
+      ) : (
+        content
+      )}
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  webOuter: {
+    flex: 1,
+    backgroundColor: '#EEF2F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phoneFrame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 430,
+    backgroundColor: colors.background,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+  },
+});
+
