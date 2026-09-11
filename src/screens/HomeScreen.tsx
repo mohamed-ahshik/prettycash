@@ -12,14 +12,9 @@ export function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{mockUser.initial}</Text>
-            </View>
-            <View>
-              <Text style={styles.greeting}>Hi {mockUser.name}!</Text>
-              <Text style={styles.date}>{mockUser.date}</Text>
-            </View>
+          <View>
+            <Text style={styles.brandingTitle}>PrettyCash</Text>
+            <Text style={styles.date}>{mockUser.date}</Text>
           </View>
         </View>
 
@@ -61,31 +56,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatar: {
-    height: 48,
-    width: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-  },
-  avatarText: {
-    fontSize: 18,
+  brandingTitle: {
+    fontSize: 22,
     fontWeight: '700',
     fontFamily: fonts.bold,
-    color: colors.primaryForeground,
-  },
-  greeting: {
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: fonts.semibold,
-    lineHeight: 22,
     color: colors.foreground,
+    letterSpacing: -0.3,
   },
   date: {
     fontSize: 12,

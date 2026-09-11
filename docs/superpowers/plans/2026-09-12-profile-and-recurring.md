@@ -28,7 +28,7 @@
 **Interfaces:**
 - Produces: `RecurringItem`, `UserProfile`, `INITIAL_PROFILE`, `INITIAL_RECURRING_ITEMS`.
 
-- [ ] **Step 1: Create `src/types/profile.ts`**
+- [x] **Step 1: Create `src/types/profile.ts`**
 
 ```ts
 export interface RecurringItem {
@@ -55,14 +55,14 @@ export interface UserProfile {
 }
 ```
 
-- [ ] **Step 2: Export from `src/types/index.ts`**
+- [x] **Step 2: Export from `src/types/index.ts`**
 
 Add to `src/types/index.ts`:
 ```ts
 export * from './profile';
 ```
 
-- [ ] **Step 3: Create `src/data/profileData.ts`**
+- [x] **Step 3: Create `src/data/profileData.ts`**
 
 ```ts
 import { RecurringItem, UserProfile } from '../types';
@@ -129,12 +129,12 @@ export const INITIAL_RECURRING_ITEMS: RecurringItem[] = [
 ];
 ```
 
-- [ ] **Step 4: Verify type-check**
+- [x] **Step 4: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/types/profile.ts src/types/index.ts src/data/profileData.ts
@@ -151,7 +151,7 @@ git commit -m "feat: add profile and recurring domain types and mock data"
 **Interfaces:**
 - Removes avatar & "Hi Maya!" greeting; adds "PrettyCash" app branding title and date.
 
-- [ ] **Step 1: Edit `src/screens/HomeScreen.tsx`**
+- [x] **Step 1: Edit `src/screens/HomeScreen.tsx`**
 
 Replace the header in `src/screens/HomeScreen.tsx`:
 ```tsx
@@ -173,12 +173,12 @@ And in `styles`, replace `greeting`, `avatar`, `avatarText`, `headerLeft` with:
   },
 ```
 
-- [ ] **Step 2: Verify type-check**
+- [x] **Step 2: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/screens/HomeScreen.tsx
@@ -196,7 +196,7 @@ git commit -m "feat: update HomeScreen header with PrettyCash branding"
 **Interfaces:**
 - Produces: `<AddRecurringModal visible onClose onSave />`, `<RecurringModal visible items onClose onToggleActive onAddItem />`.
 
-- [ ] **Step 1: Create `src/components/AddRecurringModal.tsx`**
+- [x] **Step 1: Create `src/components/AddRecurringModal.tsx`**
 
 ```tsx
 import React, { useState } from 'react';
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Create `src/components/RecurringModal.tsx`**
+- [x] **Step 2: Create `src/components/RecurringModal.tsx`**
 
 ```tsx
 import React, { useState } from 'react';
@@ -726,12 +726,12 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Verify type-check**
+- [x] **Step 3: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/AddRecurringModal.tsx src/components/RecurringModal.tsx
@@ -749,7 +749,7 @@ git commit -m "feat: add RecurringModal and AddRecurringModal components"
 **Interfaces:**
 - Produces: `<CurrencyPickerModal visible selected onSelect onClose />`, `<AboutModal visible onClose />`.
 
-- [ ] **Step 1: Create `src/components/CurrencyPickerModal.tsx`**
+- [x] **Step 1: Create `src/components/CurrencyPickerModal.tsx`**
 
 ```tsx
 import React from 'react';
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Create `src/components/AboutModal.tsx`**
+- [x] **Step 2: Create `src/components/AboutModal.tsx`**
 
 Contains app info with no license/credits/SDK text per user constraint:
 
@@ -962,12 +962,12 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Verify type-check**
+- [x] **Step 3: Verify type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/CurrencyPickerModal.tsx src/components/AboutModal.tsx
@@ -985,7 +985,7 @@ git commit -m "feat: add CurrencyPickerModal and AboutModal components"
 **Interfaces:**
 - Produces: Complete `<ProfileScreen />` with Hero card, Recurring modal, Settings options, and About modal.
 
-- [ ] **Step 1: Replace `src/screens/ProfileScreen.tsx`**
+- [x] **Step 1: Replace `src/screens/ProfileScreen.tsx`**
 
 ```tsx
 import React, { useState } from 'react';
@@ -1265,11 +1265,11 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Update spec implementation status**
+- [x] **Step 2: Update spec implementation status**
 
 In `docs/superpowers/specs/2026-09-12-profile-and-recurring-design.md`, set `Implementation status:` to `Implemented`.
 
-- [ ] **Step 3: Verify type-check & Android bundle export**
+- [x] **Step 3: Verify type-check & Android bundle export**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
@@ -1277,7 +1277,7 @@ Expected: no errors.
 Run: `npx expo export --platform android`
 Expected: bundles successfully without errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/screens/ProfileScreen.tsx docs/superpowers/specs/2026-09-12-profile-and-recurring-design.md
