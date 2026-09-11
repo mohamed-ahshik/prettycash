@@ -12,7 +12,7 @@
    - User Hero Card (Avatar, Name, Email/Member date, Edit Profile action).
    - **Recurring Transactions** management (schedule recurring expenses and incomes with specific day of month).
    - **Settings** (Currency, Notifications, Haptic Feedback, Export Data).
-   - **About** section (App name, Version `1.0.0`, Version code `1`, Expo SDK info, and app description — with no license/credits lines).
+   - **About** section (App name, Version `1.0.0`, Version code `1`, and app description — with no license/credits lines).
 
 ---
 
@@ -72,9 +72,8 @@ Contained in a card or modal:
 - **App Name:** PrettyCash
 - **Version:** `1.0.0`
 - **Version Code:** `1` (Build 202609)
-- **Framework:** Expo SDK 57 / React Native 0.86
 - **Description:** "PrettyCash is a modern, lightweight personal budget and expense tracking application designed for speed, clarity, and peace of mind."
-*(Note: License and credits lines are explicitly excluded per user request).*
+*(Note: License, credits, and framework details are explicitly excluded per user request).*
 
 ---
 
