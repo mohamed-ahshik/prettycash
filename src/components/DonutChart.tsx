@@ -27,7 +27,7 @@ export function DonutChart({ items, total, type, onToggleType }: DonutChartProps
       {/* Donut chart on the left */}
       <View style={styles.chartContainer}>
         <Svg width={size} height={size}>
-          <G rotation="-90" origin={`${center}, ${center}`}>
+          <G transform={`rotate(-90 ${center} ${center})`}>
             {/* Background base ring */}
             <Circle
               cx={center}

@@ -1,0 +1,67 @@
+diff --git a/node_modules/@react-navigation/bottom-tabs/lib/module/views/ScreenFallback.js b/node_modules/@react-navigation/bottom-tabs/lib/module/views/ScreenFallback.js
+index e27e9c2..3bf3524 100644
+--- a/node_modules/@react-navigation/bottom-tabs/lib/module/views/ScreenFallback.js
++++ b/node_modules/@react-navigation/bottom-tabs/lib/module/views/ScreenFallback.js
+@@ -26,17 +26,22 @@ export const MaybeScreenContainer = ({
+ export function MaybeScreen({
+   enabled,
+   active,
++  pointerEvents,
+   ...rest
+ }) {
+   if (Screens?.screensEnabled?.()) {
+     return /*#__PURE__*/_jsx(Screens.Screen, {
+       enabled: enabled,
+       activityState: active,
++      pointerEvents: pointerEvents,
+       ...rest
+     });
+   }
+   return /*#__PURE__*/_jsx(View, {
+-    ...rest
++    ...rest,
++    style: [rest.style, pointerEvents != null ? {
++      pointerEvents
++    } : null]
+   });
+ }
+ //# sourceMappingURL=ScreenFallback.js.map
+\ No newline at end of file
+diff --git a/node_modules/@react-navigation/bottom-tabs/src/views/ScreenFallback.tsx b/node_modules/@react-navigation/bottom-tabs/src/views/ScreenFallback.tsx
+index c792cda..7fb1181 100644
+--- a/node_modules/@react-navigation/bottom-tabs/src/views/ScreenFallback.tsx
++++ b/node_modules/@react-navigation/bottom-tabs/src/views/ScreenFallback.tsx
+@@ -39,12 +39,30 @@ export const MaybeScreenContainer = ({
+   return <View {...rest} />;
+ };
+ 
+-export function MaybeScreen({ enabled, active, ...rest }: ViewProps & Props) {
++export function MaybeScreen({
++  enabled,
++  active,
++  pointerEvents,
++  ...rest
++}: ViewProps & Props) {
+   if (Screens?.screensEnabled?.()) {
+     return (
+-      <Screens.Screen enabled={enabled} activityState={active} {...rest} />
++      <Screens.Screen
++        enabled={enabled}
++        activityState={active}
++        pointerEvents={pointerEvents}
++        {...rest}
++      />
+     );
+   }
+ 
+-  return <View {...rest} />;
++  return (
++    <View
++      {...rest}
++      style={[
++        rest.style,
++        pointerEvents != null ? { pointerEvents } : null,
++      ]}
++    />
++  );
+ }

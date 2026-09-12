@@ -17,7 +17,7 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
       <View style={[styles.backdrop, styles.backdropOuter]} />
       <View style={[styles.backdrop, styles.backdropInner]} />
       <View style={styles.card}>
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
           <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
             <Defs>
               <Pattern id="dots" width={18} height={18} patternUnits="userSpaceOnUse">

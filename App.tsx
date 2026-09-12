@@ -72,9 +72,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 430,
     backgroundColor: colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 24, color: 'rgba(0,0,0,0.1)' }],
   },
 });
