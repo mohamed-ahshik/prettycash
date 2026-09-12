@@ -14,6 +14,6 @@ it('groups by day and computes signed totals', () => {
   ];
   const groups = groupTransactionsByDay(txs, new Date(2026, 8, 9));
   expect(groups.map((g) => g.label)).toEqual(['Today', 'Sep 1']);
-  expect(groups[0].total).toBe(30); // -20 + 50
+  expect(groups[0].total).toBe(30);
   expect(groups[1].total).toBe(-5);
 });

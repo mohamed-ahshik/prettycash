@@ -37,6 +37,18 @@ function currentTimeString(): string {
   return `${hours}:${minutes} ${ampm}`;
 }
 
+function to12hTime(value: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return value;
+  let hours = Number(match[1]);
+  const minutes = match[2];
+  if (Number.isNaN(hours) || hours > 23) return value;
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 export function TransactionForm({ initial, onSubmit, onCancel }: TransactionFormProps) {
   const { expenseCategories, incomeCategories } = useCategories();
 
@@ -49,8 +61,8 @@ export function TransactionForm({ initial, onSubmit, onCancel }: TransactionForm
 
   const [name, setName] = useState(initial?.merchant ?? '');
   const [amount, setAmount] = useState(initial?.amount !== undefined ? String(initial.amount) : '');
-  const [date, setDate] = useState(initial?.date ?? todayString());
-  const [time, setTime] = useState(initial?.time ?? currentTimeString());
+  const [date, setDate] = useState(initial?.date || todayString());
+  const [time, setTime] = useState(initial?.time ? to12hTime(initial.time) : currentTimeString());
   const [note, setNote] = useState(initial?.note ?? '');
   const [items, setItems] = useState<LineItem[]>(initialItems);
   const [type, setType] = useState<TransactionType>('expense');

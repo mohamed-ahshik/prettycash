@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -29,9 +29,11 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   const [flow, setFlow] = useState<Flow>('chooser');
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const requestToken = useRef(0);
 
   useEffect(() => {
     if (!visible) {
+      requestToken.current += 1;
       setFlow('chooser');
       setDraft(null);
       setError(null);
@@ -39,15 +41,18 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   }, [visible]);
 
   const handlePicked = async (base64: string, mimeType: string) => {
+    const token = ++requestToken.current;
     setFlow('analyzing');
     setDraft(null);
     setError(null);
     try {
       const result = await analyzeReceipt(base64, mimeType);
+      if (token !== requestToken.current) return;
       setDraft(result);
       setError(null);
       setFlow('form');
     } catch (e) {
+      if (token !== requestToken.current) return;
       setError(e instanceof ReceiptAnalysisError ? e.message : 'Receipt analysis failed.');
       setDraft(null);
       setFlow('form');
@@ -125,6 +130,9 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
             <View style={styles.analyzingWrap}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={styles.analyzingText}>Reading receipt…</Text>
+              <Pressable style={styles.cancelButton} onPress={onClose}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
             </View>
           )}
 
@@ -239,6 +247,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: fonts.semibold,
     color: colors.mutedForeground,
+  },
+  cancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: radii.pill,
+    backgroundColor: colors.muted,
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: fonts.semibold,
+    color: colors.foreground,
   },
   formWrap: {
     flex: 1,

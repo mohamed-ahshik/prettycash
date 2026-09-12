@@ -32,6 +32,7 @@ export function ReceiptImagePicker({ onPicked, onCancel }: ReceiptImagePickerPro
 
   const pickFromGallery = async () => {
     setError(null);
+    setPermissionDenied(false);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       base64: true,

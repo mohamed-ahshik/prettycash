@@ -4,7 +4,8 @@ const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 
 function parseDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1);
+  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
+  return Number.isNaN(date.getTime()) ? new Date(0) : date;
 }
 
 function startOfDay(d: Date): Date {

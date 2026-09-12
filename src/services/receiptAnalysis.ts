@@ -31,11 +31,15 @@ export function normalizeReceiptDraft(data: unknown): ReceiptDraft {
   };
 }
 
+const REQUEST_TIMEOUT_MS = 20000;
+
 export async function analyzeReceipt(imageBase64: string, mimeType: string): Promise<ReceiptDraft> {
   const { baseUrl, apiKey } = getVisionConfig();
   if (!baseUrl || !apiKey) {
     throw new ReceiptAnalysisError('NOT_CONFIGURED', 'Vision backend is not configured.');
   }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(`${baseUrl.replace(/\/$/, '')}/analyze-receipt`, {
@@ -45,9 +49,15 @@ export async function analyzeReceipt(imageBase64: string, mimeType: string): Pro
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ image: { base64: imageBase64, mimeType } }),
+      signal: controller.signal,
     });
-  } catch {
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') {
+      throw new ReceiptAnalysisError('TIMEOUT', 'Receipt analysis timed out.');
+    }
     throw new ReceiptAnalysisError('NETWORK', 'Could not reach the vision backend.');
+  } finally {
+    clearTimeout(timeout);
   }
   if (!res.ok) {
     let code = 'INTERNAL';
