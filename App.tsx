@@ -8,6 +8,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
 import { CategoriesProvider } from './src/context/CategoriesContext';
+import { TransactionsProvider } from './src/context/TransactionsContext';
 import { CategoriesScreen } from './src/screens/CategoriesScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
@@ -48,13 +49,15 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <CategoriesProvider>
-        {Platform.OS === 'web' ? (
-          <View style={styles.webOuter}>
-            <View style={styles.phoneFrame}>{content}</View>
-          </View>
-        ) : (
-          content
-        )}
+        <TransactionsProvider>
+          {Platform.OS === 'web' ? (
+            <View style={styles.webOuter}>
+              <View style={styles.phoneFrame}>{content}</View>
+            </View>
+          ) : (
+            content
+          )}
+        </TransactionsProvider>
       </CategoriesProvider>
     </SafeAreaProvider>
   );

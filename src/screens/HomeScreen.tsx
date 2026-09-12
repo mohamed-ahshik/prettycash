@@ -4,10 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BalanceCard } from '../components/BalanceCard';
 import { MonthPicker } from '../components/MonthPicker';
 import { TransactionGroup } from '../components/TransactionGroup';
-import { mockBalance, mockMonth, mockTransactions, mockUser } from '../data/mockData';
+import { useTransactions } from '../context/TransactionsContext';
+import { mockBalance, mockMonth, mockUser } from '../data/mockData';
 import { colors, fonts } from '../theme';
 
 export function HomeScreen() {
+  const { groups } = useTransactions();
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -32,7 +34,7 @@ export function HomeScreen() {
         </View>
 
         <View style={styles.listCard}>
-          {mockTransactions.map((group) => (
+          {groups.map((group) => (
             <TransactionGroup key={group.label} group={group} />
           ))}
         </View>

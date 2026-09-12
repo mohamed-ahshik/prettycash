@@ -1,21 +1,38 @@
-export type Category = 'Food' | 'Travel' | 'Fun' | 'Coffee' | 'Income' | 'Other';
-
 export type TransactionType = 'income' | 'expense';
+
+export interface LineItem {
+  id: string;
+  name: string;
+  quantity?: number;
+  price: number;
+}
 
 export interface Transaction {
   id: string;
   name: string;
+  date: string;
   time: string;
-  category: Category;
+  categoryId: string;
   type: TransactionType;
   amount: number;
   icon: string;
+  note?: string;
+  items?: LineItem[];
 }
 
 export interface TransactionGroup {
   label: string;
   total: number;
   transactions: Transaction[];
+}
+
+export interface ReceiptDraft {
+  merchant: string;
+  amount: number;
+  date: string;
+  time: string;
+  note: string;
+  items: { name: string; quantity?: number; price: number }[];
 }
 
 export * from './category';
