@@ -1,8 +1,9 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, radii } from '../theme';
+import { AddTransactionSheet } from './AddTransactionSheet';
 import { Icon } from './Icon';
 
 type TabName = 'Home' | 'Insights' | 'Categories' | 'Profile';
@@ -17,6 +18,7 @@ const TAB_ICONS: Record<TabName, { active: string; inactive: string }> = {
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const activeRoute = state.routes[state.index];
+  const [sheetVisible, setSheetVisible] = useState(false);
 
   const renderTab = (name: TabName) => {
     const route = state.routes.find((r) => r.name === name);
@@ -60,12 +62,13 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
       {renderTab('Home')}
       {renderTab('Insights')}
       <View style={styles.addWrap}>
-        <Pressable style={styles.addButton} onPress={() => {}}>
+        <Pressable style={styles.addButton} onPress={() => setSheetVisible(true)}>
           <Icon name="plus" size={28} color={colors.primaryForeground} />
         </Pressable>
       </View>
       {renderTab('Categories')}
       {renderTab('Profile')}
+      <AddTransactionSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} />
     </View>
   );
 }
