@@ -2,6 +2,7 @@
   "expo": {
     "name": "PrettyCash",
     "slug": "prettycash",
+    "scheme": "prettycash",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,7 +31,8 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to use the camera to scan receipts.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }
