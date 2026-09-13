@@ -14,6 +14,7 @@ export async function insertTransaction(input: Omit<Transaction, 'id'>): Promise
   const { data, error } = await supabase.from('transactions').insert({
     name: input.name, date: input.date, time: input.time, category_id: input.categoryId || null,
     type: input.type, amount: input.amount, icon: input.icon, note: input.note ?? null,
+    receipt_path: input.receiptPath ?? null,
   }).select().single();
   if (error) throw error;
   if (input.items && input.items.length) {

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useTransactions } from '../context/TransactionsContext';
+import { uploadReceipt } from '../data/repositories/storageRepo';
 import { analyzeReceipt, ReceiptAnalysisError } from '../services/receiptAnalysis';
 import { colors, fonts, radii } from '../theme';
 import { ReceiptDraft, Transaction } from '../types';
@@ -29,6 +30,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   const [flow, setFlow] = useState<Flow>('chooser');
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [receiptPath, setReceiptPath] = useState<string | null>(null);
   const requestToken = useRef(0);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
       setFlow('chooser');
       setDraft(null);
       setError(null);
+      setReceiptPath(null);
     }
   }, [visible]);
 
@@ -45,6 +48,12 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setFlow('analyzing');
     setDraft(null);
     setError(null);
+    setReceiptPath(null);
+    uploadReceipt(base64, mimeType)
+      .then((path) => {
+        if (token === requestToken.current) setReceiptPath(path);
+      })
+      .catch(() => {});
     try {
       const result = await analyzeReceipt(base64, mimeType);
       if (token !== requestToken.current) return;
@@ -62,11 +71,12 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   const handleManual = () => {
     setDraft(null);
     setError(null);
+    setReceiptPath(null);
     setFlow('form');
   };
 
   const handleSubmit = (input: Omit<Transaction, 'id'>) => {
-    addTransaction(input);
+    addTransaction({ ...input, receiptPath: receiptPath ?? undefined });
     onClose();
   };
 
