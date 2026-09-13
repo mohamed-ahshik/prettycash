@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useTransactions } from '../context/TransactionsContext';
 import { uploadReceipt } from '../data/repositories/storageRepo';
-import { analyzeReceipt, ReceiptAnalysisError } from '../services/receiptAnalysis';
+import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
 import { colors, fonts, radii } from '../theme';
 import { ReceiptDraft, Transaction } from '../types';
 import { Icon } from './Icon';
@@ -69,7 +69,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
       setFlow('form');
     } catch (e) {
       if (token !== requestToken.current) return;
-      setError(e instanceof ReceiptAnalysisError ? e.message : 'Receipt analysis failed.');
+      setError(formatAnalysisError(e));
       setDraft(null);
       setFlow('form');
     }

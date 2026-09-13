@@ -30,8 +30,8 @@ export interface TransactionGroup {
 export interface ReceiptDraft {
   merchant: string;
   amount: number;
-  date: string;
-  time: string;
+  date?: string;
+  time?: string;
   note: string;
   items: { name: string; quantity?: number; price: number }[];
 }
