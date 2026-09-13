@@ -18,6 +18,7 @@ export interface Transaction {
   icon: string;
   note?: string;
   items?: LineItem[];
+  receiptPath?: string;
 }
 
 export interface TransactionGroup {
