@@ -42,23 +42,31 @@ EXPO_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-- [ ] **Step 3: Import the URL polyfill at the app entry**
+- [ ] **Step 3: Add a URL scheme for native OAuth deep links**
+
+In `app.json`, add a top-level `"scheme"` to the `expo` object:
+```json
+"scheme": "prettycash"
+```
+(Required by `expo-auth-session`'s `makeRedirectUri()` on iOS/Android; harmless on web.)
+
+- [ ] **Step 4: Import the URL polyfill at the app entry**
 
 In `index.ts`, add as the first line (before the `App` import):
 ```ts
 import 'react-native-url-polyfill/auto';
 ```
 
-- [ ] **Step 4: Verify compile**
+- [ ] **Step 5: Verify compile**
 
 Run: `npx tsc --noEmit`
 Expected: success.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add package.json package-lock.json .env.example index.ts
-git commit -m "chore: add supabase deps and env config"
+git add package.json package-lock.json .env.example index.ts app.json
+git commit -m "chore: add supabase deps, env config, and app scheme"
 ```
 
 ---
