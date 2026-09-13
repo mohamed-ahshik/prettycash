@@ -31,6 +31,9 @@ export async function isSeeded(): Promise<boolean> {
 }
 
 export async function setSeeded(seeded: boolean): Promise<void> {
-  const { error } = await supabase.from('profiles').update({ seeded }).eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error('not authenticated');
+  const { error } = await supabase.from('profiles').update({ seeded }).eq('user_id', userId);
   if (error) throw error;
 }

@@ -6,7 +6,7 @@ import { useAuth } from './AuthContext';
 interface CategoriesContextType {
   expenseCategories: CategoryItem[];
   incomeCategories: CategoryItem[];
-  addCategory: (item: Omit<CategoryItem, 'id'>) => void;
+  addCategory: (item: Omit<CategoryItem, 'id'>) => Promise<void>;
   loading: boolean;
   error: string | null;
 }

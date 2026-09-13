@@ -18,7 +18,7 @@ const webStorage = {
 export const secureStorageAdapter = Platform.OS === 'web' ? webStorage : AsyncStorage;
 
 export function getSupabaseUrl(): string {
-  return process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  return process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co';
 }
 
 export function getSupabaseAnonKey(): string {

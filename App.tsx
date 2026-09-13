@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -17,7 +17,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { colors } from './src/theme';
+import { colors, fonts, radii } from './src/theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -71,9 +71,13 @@ function Gate() {
 function Bootstrap({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
+    setError(null);
 
     (async () => {
       try {
@@ -93,22 +97,38 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
           });
         }
         await seedDefaultCategoriesIfNeeded();
-      } catch {
-      } finally {
         if (!cancelled) setReady(true);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, attempt]);
+
+  if (error) {
+    return <BootstrapError error={error} onRetry={() => setAttempt((a) => a + 1)} />;
+  }
 
   if (!ready) {
     return <Splash />;
   }
 
   return <>{children}</>;
+}
+
+function BootstrapError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <View style={styles.errorWrap}>
+      <Text style={styles.errorTitle}>Something went wrong</Text>
+      <Text style={styles.errorMessage}>{error}</Text>
+      <Pressable style={styles.retryButton} onPress={onRetry}>
+        <Text style={styles.retryButtonText}>Retry</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 function Splash() {
@@ -154,6 +174,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.background,
+  },
+  errorWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+    backgroundColor: colors.background,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
+    color: colors.foreground,
+  },
+  errorMessage: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: radii.pill,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
+    color: colors.primaryForeground,
   },
   webOuter: {
     flex: 1,

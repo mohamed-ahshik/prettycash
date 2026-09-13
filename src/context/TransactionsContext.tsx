@@ -6,7 +6,7 @@ import { useAuth } from './AuthContext';
 
 interface TransactionsContextType {
   groups: TransactionGroup[];
-  addTransaction: (input: Omit<Transaction, 'id'>) => void;
+  addTransaction: (input: Omit<Transaction, 'id'>) => Promise<void>;
   loading: boolean;
   error: string | null;
 }

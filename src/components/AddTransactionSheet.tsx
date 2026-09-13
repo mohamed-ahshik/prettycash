@@ -49,11 +49,18 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setDraft(null);
     setError(null);
     setReceiptPath(null);
-    uploadReceipt(base64, mimeType)
-      .then((path) => {
-        if (token === requestToken.current) setReceiptPath(path);
-      })
-      .catch(() => {});
+
+    try {
+      const path = await uploadReceipt(base64, mimeType);
+      if (token !== requestToken.current) return;
+      setReceiptPath(path);
+    } catch (e) {
+      if (token !== requestToken.current) return;
+      setError(e instanceof Error ? e.message : 'Receipt upload failed.');
+      setFlow('form');
+      return;
+    }
+
     try {
       const result = await analyzeReceipt(base64, mimeType);
       if (token !== requestToken.current) return;
@@ -75,9 +82,13 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setFlow('form');
   };
 
-  const handleSubmit = (input: Omit<Transaction, 'id'>) => {
-    addTransaction({ ...input, receiptPath: receiptPath ?? undefined });
-    onClose();
+  const handleSubmit = async (input: Omit<Transaction, 'id'>) => {
+    try {
+      await addTransaction({ ...input, receiptPath: receiptPath ?? undefined });
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save transaction.');
+    }
   };
 
   const renderHeader = (title: string, subtitle?: string) => (

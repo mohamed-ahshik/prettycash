@@ -2,7 +2,7 @@ create extension if not exists "pgcrypto";
 
 create table public.profiles (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid unique not null references auth.users(id) on delete cascade,
+  user_id uuid unique not null default auth.uid() references auth.users(id) on delete cascade,
   name text,
   email text,
   currency text not null default 'USD ($)',
@@ -15,7 +15,7 @@ create table public.profiles (
 
 create table public.categories (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
   type text not null check (type in ('expense','income')),
   icon text,
@@ -28,7 +28,7 @@ create table public.categories (
 
 create table public.transactions (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
   date date not null,
   time text,
@@ -53,7 +53,7 @@ create table public.transaction_items (
 
 create table public.recurring_items (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
   type text not null check (type in ('expense','income')),
   amount numeric(12,2) not null,
@@ -108,7 +108,9 @@ create policy "own receipt write" on storage.objects
   for insert with check (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
 
 create policy "own receipt update" on storage.objects
-  for update using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
+  for update
+  using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
 
 create policy "own receipt delete" on storage.objects
   for delete using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
