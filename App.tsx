@@ -94,7 +94,6 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
         }
         await seedDefaultCategoriesIfNeeded();
       } catch {
-        // Best-effort: providers surface their own errors.
       } finally {
         if (!cancelled) setReady(true);
       }

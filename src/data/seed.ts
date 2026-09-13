@@ -1,5 +1,5 @@
 import { CategoryItem } from '../types';
-import { isSeeded } from './repositories/profileRepo';
+import { isSeeded, setSeeded } from './repositories/profileRepo';
 import { insertCategory, listCategories } from './repositories/categoriesRepo';
 
 export const DEFAULT_EXPENSE_CATEGORIES: Omit<CategoryItem, 'id'>[] = [
@@ -28,5 +28,6 @@ export async function seedDefaultCategoriesIfNeeded(): Promise<boolean> {
     ...DEFAULT_INCOME_CATEGORIES,
   ];
   for (const cat of all) await insertCategory(cat);
+  await setSeeded(true);
   return true;
 }

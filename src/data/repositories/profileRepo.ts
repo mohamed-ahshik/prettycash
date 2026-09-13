@@ -29,3 +29,8 @@ export async function isSeeded(): Promise<boolean> {
   if (error) throw error;
   return data?.seeded ?? false;
 }
+
+export async function setSeeded(seeded: boolean): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ seeded }).eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+  if (error) throw error;
+}
