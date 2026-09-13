@@ -1,38 +1,111 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AboutModal } from '../components/AboutModal';
 import { CurrencyPickerModal } from '../components/CurrencyPickerModal';
 import { Icon } from '../components/Icon';
 import { RecurringModal } from '../components/RecurringModal';
-import { INITIAL_PROFILE, INITIAL_RECURRING_ITEMS } from '../data/profileData';
+import { useAuth } from '../context/AuthContext';
+import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
+import { insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
 import { colors, fonts, radii } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
 
 export function ProfileScreen() {
-  const [profile, setProfile] = useState<UserProfile>(INITIAL_PROFILE);
-  const [recurringItems, setRecurringItems] = useState<RecurringItem[]>(INITIAL_RECURRING_ITEMS);
+  const { session } = useAuth();
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [recurringVisible, setRecurringVisible] = useState(false);
   const [currencyVisible, setCurrencyVisible] = useState(false);
   const [aboutVisible, setAboutVisible] = useState(false);
 
-  const activeCount = recurringItems.filter((it) => it.active).length;
+  useEffect(() => {
+    if (!session) return;
+
+    let cancelled = false;
+    setLoading(true);
+
+    Promise.all([getProfile(), listRecurring()])
+      .then(([profileData, recurring]) => {
+        if (cancelled) return;
+        setProfile(profileData);
+        setRecurringItems(recurring);
+        setError(null);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  const updateProfile = (patch: Partial<UserProfile>) => {
+    if (!profile) return;
+    const next = { ...profile, ...patch };
+    setProfile(next);
+    upsertProfile(next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  };
 
   const handleToggleRecurring = (id: string) => {
+    const item = recurringItems.find((it) => it.id === id);
+    if (!item) return;
+    const next = !item.active;
     setRecurringItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, active: !it.active } : it))
+      prev.map((it) => (it.id === id ? { ...it, active: next } : it))
     );
+    setRecurringActive(id, next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
   };
 
-  const handleAddRecurring = (newItem: Omit<RecurringItem, 'id' | 'active'>) => {
-    const itemWithId: RecurringItem = {
-      ...newItem,
-      id: `rec-${Date.now()}`,
-      active: true,
-    };
-    setRecurringItems((prev) => [itemWithId, ...prev]);
+  const handleAddRecurring = async (newItem: Omit<RecurringItem, 'id' | 'active'>) => {
+    try {
+      const created = await insertRecurring(newItem);
+      setRecurringItems((prev) => [created, ...prev]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>No profile found.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const activeCount = recurringItems.filter((it) => it.active).length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -84,7 +157,7 @@ export function ProfileScreen() {
             </View>
             <Switch
               value={profile.notificationsEnabled}
-              onValueChange={(val) => setProfile((p) => ({ ...p, notificationsEnabled: val }))}
+              onValueChange={(val) => updateProfile({ notificationsEnabled: val })}
               trackColor={{ false: colors.border, true: colors.secondary }}
               thumbColor={profile.notificationsEnabled ? colors.primary : '#FFFFFF'}
             />
@@ -97,7 +170,7 @@ export function ProfileScreen() {
             </View>
             <Switch
               value={profile.hapticsEnabled}
-              onValueChange={(val) => setProfile((p) => ({ ...p, hapticsEnabled: val }))}
+              onValueChange={(val) => updateProfile({ hapticsEnabled: val })}
               trackColor={{ false: colors.border, true: colors.secondary }}
               thumbColor={profile.hapticsEnabled ? colors.primary : '#FFFFFF'}
             />
@@ -129,7 +202,7 @@ export function ProfileScreen() {
       <CurrencyPickerModal
         visible={currencyVisible}
         selected={profile.currency}
-        onSelect={(cur) => setProfile((p) => ({ ...p, currency: cur }))}
+        onSelect={(cur) => updateProfile({ currency: cur })}
         onClose={() => setCurrencyVisible(false)}
       />
 
@@ -142,6 +215,18 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.mutedForeground,
+    textAlign: 'center',
   },
   content: {
     paddingHorizontal: 20,
