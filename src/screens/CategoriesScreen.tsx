@@ -5,29 +5,16 @@ import { AddCategoryModal } from '../components/AddCategoryModal';
 import { CategoryRow } from '../components/CategoryRow';
 import { Icon } from '../components/Icon';
 import { SegmentedControl } from '../components/SegmentedControl';
-import { INITIAL_EXPENSE_CATEGORIES, INITIAL_INCOME_CATEGORIES } from '../data/categoriesData';
+import { useCategories } from '../context/CategoriesContext';
 import { colors, fonts, radii } from '../theme';
-import { CategoryItem, CategoryType } from '../types';
+import { CategoryType } from '../types';
 
 export function CategoriesScreen() {
   const [activeType, setActiveType] = useState<CategoryType>('expense');
-  const [expenseCategories, setExpenseCategories] = useState<CategoryItem[]>(INITIAL_EXPENSE_CATEGORIES);
-  const [incomeCategories, setIncomeCategories] = useState<CategoryItem[]>(INITIAL_INCOME_CATEGORIES);
+  const { expenseCategories, incomeCategories, addCategory } = useCategories();
   const [modalVisible, setModalVisible] = useState(false);
 
   const currentList = activeType === 'expense' ? expenseCategories : incomeCategories;
-
-  const handleAddCategory = (newItem: Omit<CategoryItem, 'id'>) => {
-    const itemWithId: CategoryItem = {
-      ...newItem,
-      id: `${newItem.type}-${Date.now()}`,
-    };
-    if (newItem.type === 'expense') {
-      setExpenseCategories((prev) => [itemWithId, ...prev]);
-    } else {
-      setIncomeCategories((prev) => [itemWithId, ...prev]);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -53,7 +40,9 @@ export function CategoriesScreen() {
         visible={modalVisible}
         type={activeType}
         onClose={() => setModalVisible(false)}
-        onSave={handleAddCategory}
+        onSave={(item) => {
+          addCategory(item).catch(() => {});
+        }}
       />
     </SafeAreaView>
   );
