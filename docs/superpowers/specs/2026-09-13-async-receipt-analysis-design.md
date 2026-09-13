@@ -99,6 +99,16 @@ Keep the existing `ReceiptAnalysisError` class (codes: `NOT_CONFIGURED`, `NETWOR
 
 `normalizeReceiptDraft` stays and is applied to the `completed` `result` (and remains the single place that shapes a raw payload into `ReceiptDraft`).
 
+Also export a small pure helper so the banner copy is testable:
+
+```ts
+export function formatAnalysisError(e: unknown): string {
+  return e instanceof ReceiptAnalysisError
+    ? `${e.message} (${e.code})`
+    : 'Receipt analysis failed.';
+}
+```
+
 ---
 
 ## 5. UI behavior (`src/components/AddTransactionSheet.tsx`)
@@ -108,8 +118,18 @@ No structural change is expected — the current `handlePicked` already:
 - on any thrown error sets the error banner and falls back to the blank `TransactionForm`,
 - discards stale results on close via `requestToken`.
 
-Verify:
-- The error message surfaced on `TIMEOUT`/`FAILED` reads clearly (the `ReceiptAnalysisError.code` may be used to choose friendlier copy, but a plain `message` banner is acceptable).
+**Error banner shows the message AND the code.** Change the catch in `handlePicked` to set the banner via the `formatAnalysisError(e)` helper (§4), so a `ReceiptAnalysisError` renders as the human message followed by the machine code, e.g.:
+
+```
+Could not reach the vision backend. (NETWORK)
+Receipt analysis timed out. (TIMEOUT)
+Receipt analysis failed. (FAILED)
+```
+
+- Format: `` `${e.message} (${e.code})` ``.
+- For a non-`ReceiptAnalysisError` (unexpected) throw, fall back to the existing generic `'Receipt analysis failed.'` (no code).
+
+Also verify:
 - The "Cancel" button during `analyzing` still closes the sheet, and the in-flight poll result is discarded (existing `requestToken` guard).
 
 ---
@@ -117,6 +137,7 @@ Verify:
 ## 6. Testing (`src/services/__tests__/receiptAnalysis.test.ts`)
 
 - Update the `normalizeReceiptDraft` tests for optional `date`/`time` (absent → `undefined`).
+- Add a `formatAnalysisError` test: a `ReceiptAnalysisError('TIMEOUT', 'Receipt analysis timed out.')` → `'Receipt analysis timed out. (TIMEOUT)'`; a plain `Error` → `'Receipt analysis failed.'`.
 - Add `analyzeReceipt` tests with a mocked `fetch`:
   - **completed**: enqueue → `{ jobId }`; first poll → `{ status: 'completed', result }` → resolves to the normalized draft.
   - **failed**: poll → `{ status: 'failed', error: { message } }` → rejects with `ReceiptAnalysisError` code `FAILED`.
@@ -141,5 +162,5 @@ These were identified on the backend and are NOT frontend changes; the frontend 
 - `analyzeReceipt` enqueues, then polls `GET /jobs/{jobId}` every 1s up to 120 attempts, returning the normalized `ReceiptDraft` on `completed`.
 - `failed` → `ReceiptAnalysisError('FAILED', message)`; timeout → `ReceiptAnalysisError('TIMEOUT', ...)`; missing config → `NOT_CONFIGURED`; transport/HTTP errors → `NETWORK`/`INTERNAL`.
 - `ReceiptDraft.date`/`time` are optional; absent values are `undefined`.
-- The add-transaction flow keeps the spinner during the whole poll and falls back to the blank form with an error banner on failure.
+- The add-transaction flow keeps the spinner during the whole poll and, on failure, falls back to the blank form with an error banner that shows **both** the message and the code (e.g. `Receipt analysis timed out. (TIMEOUT)`).
 - `npx tsc --noEmit` and `npm test` pass.
