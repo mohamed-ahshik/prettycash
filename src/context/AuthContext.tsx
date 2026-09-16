@@ -27,10 +27,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const retrySession = useCallback(async () => {
     setLoading(true);
-    const { session: next, error } = await resolveInitialSession();
-    setSession(next);
-    setAuthError(error);
-    setLoading(false);
+    try {
+      const { session: next, error } = await resolveInitialSession();
+      setSession(next);
+      setAuthError(error);
+    } catch (e) {
+      setSession(null);
+      setAuthError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

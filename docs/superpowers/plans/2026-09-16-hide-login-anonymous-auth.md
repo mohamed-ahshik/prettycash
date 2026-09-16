@@ -17,7 +17,7 @@
 - Keep `signInWithProvider` and `signOut` behavior unchanged.
 - `npx expo install` (not `npm install`) for any Expo package — but this plan adds no dependencies.
 
-**Implementation status:** Not started
+**Implementation status:** Implemented
 
 ---
 
