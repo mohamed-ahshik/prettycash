@@ -1,32 +1,38 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BalanceCard } from '../components/BalanceCard';
 import { MonthPicker } from '../components/MonthPicker';
 import { TransactionGroup } from '../components/TransactionGroup';
 import { useTransactions } from '../context/TransactionsContext';
-import { mockBalance, mockMonth, mockUser } from '../data/mockData';
 import { colors, fonts } from '../theme';
+import { allTimeBalance, currentMonthKey, filterByMonth, monthTotals } from '../utils/aggregate';
+import { formatHeaderDate, formatMonthLabel } from '../utils/format';
+import { groupTransactionsByDay } from '../utils/groupTransactions';
 
 export function HomeScreen() {
-  const { groups } = useTransactions();
+  const { transactions } = useTransactions();
+  const ym = currentMonthKey();
+  const balance = useMemo(() => allTimeBalance(transactions), [transactions]);
+  const totals = useMemo(() => monthTotals(transactions, ym), [transactions, ym]);
+  const groups = useMemo(
+    () => groupTransactionsByDay(filterByMonth(transactions, ym)),
+    [transactions, ym],
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
             <Text style={styles.brandingTitle}>PrettyCash</Text>
-            <Text style={styles.date}>{mockUser.date}</Text>
+            <Text style={styles.date}>{formatHeaderDate()}</Text>
           </View>
         </View>
 
-        <MonthPicker month={mockMonth} />
+        <MonthPicker month={formatMonthLabel()} />
 
-        <BalanceCard
-          total={mockBalance.total}
-          income={mockBalance.income}
-          expense={mockBalance.expense}
-        />
+        <BalanceCard total={balance} income={totals.income} expense={totals.expense} />
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Daily transactions</Text>
