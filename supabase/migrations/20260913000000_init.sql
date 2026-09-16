@@ -1,6 +1,6 @@
 create extension if not exists "pgcrypto";
 
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid unique not null default auth.uid() references auth.users(id) on delete cascade,
   name text,
@@ -13,7 +13,7 @@ create table public.profiles (
   created_at timestamptz not null default now()
 );
 
-create table public.categories (
+create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
@@ -26,7 +26,7 @@ create table public.categories (
   created_at timestamptz not null default now()
 );
 
-create table public.transactions (
+create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
@@ -41,7 +41,7 @@ create table public.transactions (
   created_at timestamptz not null default now()
 );
 
-create table public.transaction_items (
+create table if not exists public.transaction_items (
   id uuid primary key default gen_random_uuid(),
   transaction_id uuid not null references public.transactions(id) on delete cascade,
   name text not null,
@@ -51,7 +51,7 @@ create table public.transaction_items (
   created_at timestamptz not null default now()
 );
 
-create table public.recurring_items (
+create table if not exists public.recurring_items (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
@@ -72,15 +72,19 @@ alter table public.transactions enable row level security;
 alter table public.transaction_items enable row level security;
 alter table public.recurring_items enable row level security;
 
+drop policy if exists "own profiles" on public.profiles;
 create policy "own profiles" on public.profiles
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "own categories" on public.categories;
 create policy "own categories" on public.categories
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "own transactions" on public.transactions;
 create policy "own transactions" on public.transactions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "own transaction items" on public.transaction_items;
 create policy "own transaction items" on public.transaction_items
   for all using (
     exists (
@@ -95,22 +99,27 @@ create policy "own transaction items" on public.transaction_items
     )
   );
 
+drop policy if exists "own recurring items" on public.recurring_items;
 create policy "own recurring items" on public.recurring_items
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 insert into storage.buckets (id, name, public) values ('receipts', 'receipts', false)
   on conflict (id) do nothing;
 
+drop policy if exists "own receipt read" on storage.objects;
 create policy "own receipt read" on storage.objects
   for select using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "own receipt write" on storage.objects;
 create policy "own receipt write" on storage.objects
   for insert with check (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "own receipt update" on storage.objects;
 create policy "own receipt update" on storage.objects
   for update
   using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text)
   with check (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "own receipt delete" on storage.objects;
 create policy "own receipt delete" on storage.objects
   for delete using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
