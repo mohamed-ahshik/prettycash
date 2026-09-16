@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
+import { SHOW_AUTH_UI } from './src/config';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
@@ -41,17 +42,28 @@ export default function App() {
 }
 
 function Gate() {
-  const { session, loading } = useAuth();
+  const { session, loading, authError, retrySession } = useAuth();
 
   if (loading) {
     return <Splash />;
   }
 
   if (!session) {
+    if (SHOW_AUTH_UI) {
+      return (
+        <SafeAreaProvider>
+          <LoginScreen />
+        </SafeAreaProvider>
+      );
+    }
     return (
-      <SafeAreaProvider>
-        <LoginScreen />
-      </SafeAreaProvider>
+      <AuthError
+        error={
+          authError ??
+          'Could not start a session. Enable Anonymous sign-ins in Supabase (Authentication → Providers), then retry.'
+        }
+        onRetry={retrySession}
+      />
     );
   }
 
@@ -123,6 +135,18 @@ function BootstrapError({ error, onRetry }: { error: string; onRetry: () => void
   return (
     <View style={styles.errorWrap}>
       <Text style={styles.errorTitle}>Something went wrong</Text>
+      <Text style={styles.errorMessage}>{error}</Text>
+      <Pressable style={styles.retryButton} onPress={onRetry}>
+        <Text style={styles.retryButtonText}>Retry</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function AuthError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <View style={styles.errorWrap}>
+      <Text style={styles.errorTitle}>Sign-in unavailable</Text>
       <Text style={styles.errorMessage}>{error}</Text>
       <Pressable style={styles.retryButton} onPress={onRetry}>
         <Text style={styles.retryButtonText}>Retry</Text>
