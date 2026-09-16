@@ -10,6 +10,7 @@ import { TabBar } from './src/components/TabBar';
 import { SHOW_AUTH_UI } from './src/config';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
+import { MonthProvider } from './src/context/MonthContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
@@ -72,7 +73,9 @@ function Gate() {
       <SafeAreaProvider>
         <CategoriesProvider>
           <TransactionsProvider>
-            <AppNavigator />
+            <MonthProvider>
+              <AppNavigator />
+            </MonthProvider>
           </TransactionsProvider>
         </CategoriesProvider>
       </SafeAreaProvider>
