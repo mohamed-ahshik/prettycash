@@ -5,6 +5,7 @@ import { groupTransactionsByDay } from '../utils/groupTransactions';
 import { useAuth } from './AuthContext';
 
 interface TransactionsContextType {
+  transactions: Transaction[];
   groups: TransactionGroup[];
   addTransaction: (input: Omit<Transaction, 'id'>) => Promise<void>;
   loading: boolean;
@@ -52,7 +53,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   const groups = useMemo(() => groupTransactionsByDay(transactions), [transactions]);
 
   return (
-    <TransactionsContext.Provider value={{ groups, addTransaction, loading, error }}>
+    <TransactionsContext.Provider value={{ transactions, groups, addTransaction, loading, error }}>
       {children}
     </TransactionsContext.Provider>
   );
