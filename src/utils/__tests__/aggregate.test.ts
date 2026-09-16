@@ -90,6 +90,14 @@ describe('categoryBreakdown', () => {
     expect(result.items[0].name).toBe('Uncategorized');
   });
 
+  it('buckets an unknown non-empty category id as Uncategorized', () => {
+    const list = [tx({ categoryId: 'ghost', amount: 5, date: '2026-09-02' })];
+    const result = categoryBreakdown(list, [], 'expense', '2026-09');
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).toBe('uncategorized');
+    expect(result.items[0].name).toBe('Uncategorized');
+  });
+
   it('returns empty items when the month has no matching transactions', () => {
     expect(categoryBreakdown([], [], 'expense', '2026-09')).toEqual({ total: 0, items: [] });
   });

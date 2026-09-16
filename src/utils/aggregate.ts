@@ -42,17 +42,17 @@ export function categoryBreakdown(
   type: TransactionType,
   ym: string,
 ): { total: number; items: CategoryBreakdownItem[] } {
+  const byId = new Map(categories.map((c) => [c.id, c]));
   const totals = new Map<string, number>();
   for (const t of filterByMonth(transactions, ym)) {
     if (t.type !== type) continue;
-    const id = t.categoryId ? t.categoryId : 'uncategorized';
+    const id = t.categoryId && byId.has(t.categoryId) ? t.categoryId : 'uncategorized';
     totals.set(id, (totals.get(id) ?? 0) + t.amount);
   }
 
   const total = round2(Array.from(totals.values()).reduce((s, v) => s + v, 0));
   if (total <= 0) return { total: 0, items: [] };
 
-  const byId = new Map(categories.map((c) => [c.id, c]));
   const items = Array.from(totals.entries())
     .map(([id, amount]) => {
       const cat = byId.get(id);

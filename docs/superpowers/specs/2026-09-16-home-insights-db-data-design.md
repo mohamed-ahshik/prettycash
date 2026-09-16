@@ -39,7 +39,7 @@ New module `src/utils/aggregate.ts` (pure, unit-tested):
 - `monthTotals(transactions: Transaction[], ym: string): { income: number; expense: number }` — sums amounts for rows whose `monthKey(date) === ym`.
 - `filterByMonth(transactions: Transaction[], ym: string): Transaction[]` — rows whose `monthKey(date) === ym`.
 - `allTimeBalance(transactions: Transaction[]): number` — `sum(income) − sum(expense)` over all rows.
-- `categoryBreakdown(transactions, categories, type, year, month): { total: number; items: CategoryBreakdownItem[] }` — filters to `type` and the given month, groups by `categoryId`, joins to `CategoryItem` metadata, and returns items sorted by amount descending. Percentage = `amount / total * 100` (1 decimal). A transaction whose `categoryId` is missing/empty or not found in `categories` is grouped under an `Uncategorized` bucket (`id: 'uncategorized'`, default colors). When `total === 0`, `items` is empty and no division occurs.
+- `categoryBreakdown(transactions: Transaction[], categories: CategoryItem[], type: TransactionType, ym: string): { total: number; items: CategoryBreakdownItem[] }` — filters to `type` and the given month (`ym`, a `'YYYY-MM'` string), groups by `categoryId`, joins to `CategoryItem` metadata, and returns items sorted by amount descending. Percentage = `amount / total * 100` (1 decimal). A transaction whose `categoryId` is missing/empty or not found in `categories` is grouped under an `Uncategorized` bucket (`id: 'uncategorized'`, default colors). When `total === 0`, `items` is empty and no division occurs.
 
 All money values are rounded to 2 decimals at the boundary; percentages to 1.
 
@@ -63,7 +63,7 @@ All money values are rounded to 2 decimals at the boundary; percentages to 1.
 
 `src/utils/insights.ts`:
 
-- Change `getInsightsData` to `getInsightsData(type, categories, transactions, year, month)` and compute the breakdown from real transactions for that month via `categoryBreakdown`. Remove the hardcoded `sampleWeights`/`baseTotal`.
+- Change `getInsightsData` to `getInsightsData(type, categories, transactions, ym)` where `ym` is a `'YYYY-MM'` string, and compute the breakdown from real transactions for that month via `categoryBreakdown`. Remove the hardcoded `sampleWeights`/`baseTotal`.
 
 `src/screens/InsightsScreen.tsx`:
 
