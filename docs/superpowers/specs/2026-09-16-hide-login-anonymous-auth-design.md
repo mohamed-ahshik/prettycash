@@ -40,7 +40,7 @@ Behavior:
    - success → return the new session.
    - failure → return `{ session: null, error: error.message }`.
 
-The existing init effect in `AuthProvider` calls `resolveInitialSession()`, sets `session`, `authError`, and `loading`, then keeps the current `onAuthStateChange` subscription. `getSession()` may also be refreshed via that subscription.
+The existing init effect in `AuthProvider` calls `resolveInitialSession()`, sets `session`, `authError`, and `loading`, then subscribes to `onAuthStateChange`. To avoid clearing `loading` before the resolver settles (which would flash the pre-app screen during the anonymous sign-in network call), the handler ignores supabase-js's initial `INITIAL_SESSION` event and only reacts to subsequent auth-state events.
 
 ### 2.3 Context surface
 `AuthContextType` gains:

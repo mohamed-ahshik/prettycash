@@ -190,7 +190,7 @@ In `interface AuthContextType`, add:
 
 - [ ] **Step 3: Add state and the resolver runner**
 
-Replace the `const [loading, setLoading] = useState(true);` block and the `useEffect` that calls `supabase.auth.getSession()` with:
+Replace the `const [loading, setLoading] = useState(true);` block and the `useEffect` that calls `supabase.auth.getSession()` with the following. Note the `INITIAL_SESSION` guard: supabase-js emits that event immediately on subscribe (no network), so without the guard it would clear `loading` before the anonymous `signInAnonymously()` network call resolves, flashing the pre-app screen:
 
 ```ts
   const [loading, setLoading] = useState(true);
@@ -206,7 +206,8 @@ Replace the `const [loading, setLoading] = useState(true);` block and the `useEf
 
   useEffect(() => {
     retrySession();
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'INITIAL_SESSION') return;
       setSession(s);
       setAuthError(null);
       setLoading(false);
