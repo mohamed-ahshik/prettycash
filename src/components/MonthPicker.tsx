@@ -5,11 +5,12 @@ import { Icon } from './Icon';
 
 interface MonthPickerProps {
   month: string;
+  onPress?: () => void;
 }
 
-export function MonthPicker({ month }: MonthPickerProps) {
+export function MonthPicker({ month, onPress }: MonthPickerProps) {
   return (
-    <Pressable style={styles.pill}>
+    <Pressable style={styles.pill} onPress={onPress}>
       <Icon name="calendar" size={18} color={colors.primary} />
       <Text style={styles.label}>{month}</Text>
       <Icon name="chevron-down" size={18} color={colors.primary} />

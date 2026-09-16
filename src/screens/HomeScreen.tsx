@@ -1,18 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BalanceCard } from '../components/BalanceCard';
 import { MonthPicker } from '../components/MonthPicker';
+import { MONTH_NAMES, MonthYearPickerModal } from '../components/MonthYearPickerModal';
 import { TransactionGroup } from '../components/TransactionGroup';
+import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { colors, fonts } from '../theme';
-import { allTimeBalance, currentMonthKey, filterByMonth, monthTotals } from '../utils/aggregate';
-import { formatHeaderDate, formatMonthLabel } from '../utils/format';
+import { allTimeBalance, filterByMonth, monthTotals } from '../utils/aggregate';
+import { formatHeaderDate } from '../utils/format';
 import { groupTransactionsByDay } from '../utils/groupTransactions';
 
 export function HomeScreen() {
   const { transactions } = useTransactions();
-  const ym = currentMonthKey();
+  const { month, year, setMonth } = useMonth();
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const ym = `${year}-${String(month + 1).padStart(2, '0')}`;
   const balance = useMemo(() => allTimeBalance(transactions), [transactions]);
   const totals = useMemo(() => monthTotals(transactions, ym), [transactions, ym]);
   const groups = useMemo(
@@ -30,7 +34,10 @@ export function HomeScreen() {
           </View>
         </View>
 
-        <MonthPicker month={formatMonthLabel()} />
+        <MonthPicker
+          month={`${MONTH_NAMES[month]} ${year}`}
+          onPress={() => setPickerVisible(true)}
+        />
 
         <BalanceCard total={balance} income={totals.income} expense={totals.expense} />
 
@@ -40,11 +47,23 @@ export function HomeScreen() {
         </View>
 
         <View style={styles.listCard}>
-          {groups.map((group) => (
-            <TransactionGroup key={group.label} group={group} />
-          ))}
+          {groups.length === 0 ? (
+            <Text style={styles.emptyText}>No transactions</Text>
+          ) : (
+            groups.map((group) => (
+              <TransactionGroup key={group.label} group={group} />
+            ))
+          )}
         </View>
       </ScrollView>
+
+      <MonthYearPickerModal
+        visible={pickerVisible}
+        selectedMonth={month}
+        selectedYear={year}
+        onClose={() => setPickerVisible(false)}
+        onSelect={(m, y) => setMonth(m, y)}
+      />
     </SafeAreaView>
   );
 }
@@ -103,5 +122,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: 16,
     paddingBottom: 8,
+  },
+  emptyText: {
+    paddingVertical: 28,
+    textAlign: 'center',
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
   },
 });
