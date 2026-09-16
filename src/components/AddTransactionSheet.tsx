@@ -9,11 +9,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
 import { colors, fonts, radii } from '../theme';
 import { ReceiptDraft, Transaction } from '../types';
+import { monthYearFromDate } from '../utils/aggregate';
 import { Icon } from './Icon';
 import { ReceiptImagePicker } from './ReceiptImagePicker';
 import { TransactionForm } from './TransactionForm';
@@ -27,6 +29,7 @@ type Flow = 'chooser' | 'capture' | 'analyzing' | 'form';
 
 export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetProps) {
   const { addTransaction } = useTransactions();
+  const { setMonth } = useMonth();
   const [flow, setFlow] = useState<Flow>('chooser');
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +88,8 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   const handleSubmit = async (input: Omit<Transaction, 'id'>) => {
     try {
       await addTransaction({ ...input, receiptPath: receiptPath ?? undefined });
+      const { year, month } = monthYearFromDate(input.date);
+      setMonth(month, year);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save transaction.');
