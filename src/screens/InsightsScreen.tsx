@@ -7,20 +7,23 @@ import { DonutChart } from '../components/DonutChart';
 import { Icon } from '../components/Icon';
 import { MONTH_NAMES, MonthYearPickerModal } from '../components/MonthYearPickerModal';
 import { useCategories } from '../context/CategoriesContext';
+import { useTransactions } from '../context/TransactionsContext';
 import { colors, fonts } from '../theme';
 import { getInsightsData } from '../utils/insights';
 
 export function InsightsScreen() {
   const navigation = useNavigation<any>();
+  const { transactions } = useTransactions();
   const { expenseCategories, incomeCategories } = useCategories();
-  const [selectedMonth, setSelectedMonth] = useState(8); // Sept (0-indexed)
-  const [selectedYear, setSelectedYear] = useState(2026);
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [activeType, setActiveType] = useState<'expense' | 'income'>('expense');
   const [pickerVisible, setPickerVisible] = useState(false);
 
-  // Sourced directly from Categories context
   const activeCategories = activeType === 'expense' ? expenseCategories : incomeCategories;
-  const insightsData = getInsightsData(activeType, activeCategories);
+  const ym = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+  const insightsData = getInsightsData(activeType, activeCategories, transactions, ym);
 
   const toggleType = () => {
     setActiveType((prev) => (prev === 'expense' ? 'income' : 'expense'));
