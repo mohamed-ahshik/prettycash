@@ -6,6 +6,7 @@ import {
   filterByMonth,
   monthKey,
   monthTotals,
+  monthYearFromDate,
 } from '../aggregate';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
@@ -100,5 +101,19 @@ describe('categoryBreakdown', () => {
 
   it('returns empty items when the month has no matching transactions', () => {
     expect(categoryBreakdown([], [], 'expense', '2026-09')).toEqual({ total: 0, items: [] });
+  });
+});
+
+describe('monthYearFromDate', () => {
+  it('parses a YYYY-MM-DD date into a 0-based month and year', () => {
+    expect(monthYearFromDate('2024-03-29')).toEqual({ year: 2024, month: 2 });
+  });
+
+  it('falls back to the current month/year for an invalid input', () => {
+    const now = new Date();
+    expect(monthYearFromDate('not-a-date')).toEqual({
+      year: now.getFullYear(),
+      month: now.getMonth(),
+    });
   });
 });

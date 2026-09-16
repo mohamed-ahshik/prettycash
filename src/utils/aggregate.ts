@@ -71,3 +71,12 @@ export function categoryBreakdown(
 
   return { total, items };
 }
+
+export function monthYearFromDate(date: string): { year: number; month: number } {
+  const match = /^(\d{4})-(\d{2})/.exec(date);
+  if (!match) {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  }
+  return { year: Number(match[1]), month: Number(match[2]) - 1 };
+}
