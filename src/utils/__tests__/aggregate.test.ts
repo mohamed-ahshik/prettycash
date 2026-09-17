@@ -116,4 +116,12 @@ describe('monthYearFromDate', () => {
       month: now.getMonth(),
     });
   });
+
+  it('falls back when the month is out of range', () => {
+    const now = new Date();
+    expect(monthYearFromDate('2024-13-05')).toEqual({
+      year: now.getFullYear(),
+      month: now.getMonth(),
+    });
+  });
 });

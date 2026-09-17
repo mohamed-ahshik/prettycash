@@ -74,9 +74,9 @@ export function categoryBreakdown(
 
 export function monthYearFromDate(date: string): { year: number; month: number } {
   const match = /^(\d{4})-(\d{2})/.exec(date);
-  if (!match) {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }
-  return { year: Number(match[1]), month: Number(match[2]) - 1 };
+  const now = new Date();
+  if (!match) return { year: now.getFullYear(), month: now.getMonth() };
+  const month = Number(match[2]) - 1;
+  if (month < 0 || month > 11) return { year: now.getFullYear(), month: now.getMonth() };
+  return { year: Number(match[1]), month };
 }

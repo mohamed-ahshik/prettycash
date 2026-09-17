@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, radii } from '../theme';
 import { Icon } from './Icon';
@@ -24,6 +24,10 @@ export function MonthYearPickerModal({
   onSelect,
 }: MonthYearPickerModalProps) {
   const [year, setYear] = useState(selectedYear);
+
+  useEffect(() => {
+    if (visible) setYear(selectedYear);
+  }, [visible, selectedYear]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
