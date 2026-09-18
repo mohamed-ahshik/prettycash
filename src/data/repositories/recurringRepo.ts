@@ -21,3 +21,8 @@ export async function setRecurringActive(id: string, active: boolean): Promise<v
   const { error } = await supabase.from('recurring_items').update({ active }).eq('id', id);
   if (error) throw error;
 }
+
+export async function deleteRecurring(id: string): Promise<void> {
+  const { error } = await supabase.from('recurring_items').delete().eq('id', id);
+  if (error) throw error;
+}

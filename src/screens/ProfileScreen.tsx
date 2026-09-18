@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 import { RecurringModal } from '../components/RecurringModal';
 import { useAuth } from '../context/AuthContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
-import { insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
+import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
 import { colors, fonts, radii } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
@@ -73,6 +73,15 @@ export function ProfileScreen() {
     try {
       const created = await insertRecurring(newItem);
       setRecurringItems((prev) => [created, ...prev]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleDeleteRecurring = async (id: string) => {
+    try {
+      await deleteRecurring(id);
+      setRecurringItems((prev) => prev.filter((it) => it.id !== id));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -206,6 +215,7 @@ export function ProfileScreen() {
         onClose={() => setRecurringVisible(false)}
         onToggleActive={handleToggleRecurring}
         onAddItem={handleAddRecurring}
+        onDeleteItem={handleDeleteRecurring}
       />
 
       <CurrencyPickerModal

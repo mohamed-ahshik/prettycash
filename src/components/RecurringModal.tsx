@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { colors, fonts, radii } from '../theme';
 import { RecurringItem } from '../types';
+import { hapticSelection, hapticWarning } from '../lib/haptics';
 import { formatMoney } from '../utils/format';
 import { AddRecurringModal } from './AddRecurringModal';
 import { Icon } from './Icon';
@@ -12,6 +13,7 @@ interface RecurringModalProps {
   onClose: () => void;
   onToggleActive: (id: string) => void;
   onAddItem: (item: Omit<RecurringItem, 'id' | 'active'>) => void;
+  onDeleteItem: (id: string) => void;
 }
 
 export function RecurringModal({
@@ -20,18 +22,22 @@ export function RecurringModal({
   onClose,
   onToggleActive,
   onAddItem,
+  onDeleteItem,
 }: RecurringModalProps) {
   const [filter, setFilter] = useState<'expense' | 'income'>('expense');
+  const [activeOnly, setActiveOnly] = useState(true);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [addVisible, setAddVisible] = useState(false);
 
-  const filteredItems = items.filter((it) => it.type === filter);
+  const filteredItems = items.filter(
+    (it) => it.type === filter && (!activeOnly || it.active),
+  );
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <Pressable style={styles.dismissOverlay} onPress={onClose} />
         <View style={styles.sheetCard}>
-          {/* Top bar */}
           <View style={styles.topBar}>
             <Text style={styles.sheetTitle}>Recurring</Text>
             <View style={styles.topBarActions}>
@@ -41,11 +47,13 @@ export function RecurringModal({
             </View>
           </View>
 
-          {/* Toggle pill */}
           <View style={styles.toggleRow}>
             <Pressable
               style={[styles.toggleBtn, filter === 'expense' && styles.activeToggleBtn]}
-              onPress={() => setFilter('expense')}
+              onPress={() => {
+                hapticSelection();
+                setFilter('expense');
+              }}
             >
               <Text style={[styles.toggleText, filter === 'expense' && styles.activeToggleText]}>
                 Expenses
@@ -53,10 +61,38 @@ export function RecurringModal({
             </Pressable>
             <Pressable
               style={[styles.toggleBtn, filter === 'income' && styles.activeToggleBtn]}
-              onPress={() => setFilter('income')}
+              onPress={() => {
+                hapticSelection();
+                setFilter('income');
+              }}
             >
               <Text style={[styles.toggleText, filter === 'income' && styles.activeToggleText]}>
                 Income
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, activeOnly && styles.activeFilterChip]}
+              onPress={() => {
+                hapticSelection();
+                setActiveOnly(true);
+              }}
+            >
+              <Text style={[styles.filterChipText, activeOnly && styles.activeFilterChipText]}>
+                Active
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, !activeOnly && styles.activeFilterChip]}
+              onPress={() => {
+                hapticSelection();
+                setActiveOnly(false);
+              }}
+            >
+              <Text style={[styles.filterChipText, !activeOnly && styles.activeFilterChipText]}>
+                All
               </Text>
             </Pressable>
           </View>
@@ -66,35 +102,66 @@ export function RecurringModal({
             <Text style={styles.addButtonText}>Add</Text>
           </Pressable>
 
-          {/* Items list */}
           <ScrollView style={styles.listScroll} showsVerticalScrollIndicator={false}>
-            {filteredItems.map((item, index) => (
-              <View key={item.id} style={[styles.itemRow, index > 0 && styles.borderTop]}>
-                <View style={[styles.iconBox, { backgroundColor: item.colorBg }]}>
-                  <Icon name={item.icon} size={20} color={item.colorFg} />
+            {filteredItems.length === 0 ? (
+              <Text style={styles.emptyText}>
+                {activeOnly ? 'No active schedules' : 'No schedules'}
+              </Text>
+            ) : (
+              filteredItems.map((item, index) => (
+                <View key={item.id} style={[styles.itemBlock, index > 0 && styles.borderTop]}>
+                  <View style={styles.itemRow}>
+                    <View style={[styles.iconBox, { backgroundColor: item.colorBg }]}>
+                      <Icon name={item.icon} size={20} color={item.colorFg} />
+                    </View>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.itemSchedule}>Day {item.dayOfMonth} of month</Text>
+                    </View>
+                    <View style={styles.amountWrap}>
+                      <Text
+                        style={[
+                          styles.itemAmount,
+                          { color: item.type === 'income' ? colors.incomeText : colors.foreground },
+                        ]}
+                      >
+                        {item.type === 'income' ? '+' : '-'}${formatMoney(item.amount)}
+                      </Text>
+                      <Switch
+                        value={item.active}
+                        onValueChange={() => onToggleActive(item.id)}
+                        trackColor={{ false: colors.border, true: colors.secondary }}
+                        thumbColor={item.active ? colors.primary : '#FFFFFF'}
+                      />
+                      <Pressable style={styles.trashBtn} onPress={() => setConfirmId(item.id)}>
+                        <Icon name="trash-can-outline" size={18} color={colors.expenseText} />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {confirmId === item.id ? (
+                    <View style={styles.confirmRow}>
+                      <Text style={styles.confirmText}>Delete this schedule?</Text>
+                      <View style={styles.confirmActions}>
+                        <Pressable style={styles.cancelBtn} onPress={() => setConfirmId(null)}>
+                          <Text style={styles.cancelBtnText}>Cancel</Text>
+                        </Pressable>
+                        <Pressable
+                          style={styles.deleteBtn}
+                          onPress={() => {
+                            setConfirmId(null);
+                            hapticWarning();
+                            onDeleteItem(item.id);
+                          }}
+                        >
+                          <Text style={styles.deleteBtnText}>Delete</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemSchedule}>Day {item.dayOfMonth} of month</Text>
-                </View>
-                <View style={styles.amountWrap}>
-                  <Text
-                    style={[
-                      styles.itemAmount,
-                      { color: item.type === 'income' ? colors.incomeText : colors.foreground },
-                    ]}
-                  >
-                    {item.type === 'income' ? '+' : '-'}${formatMoney(item.amount)}
-                  </Text>
-                  <Switch
-                    value={item.active}
-                    onValueChange={() => onToggleActive(item.id)}
-                    trackColor={{ false: colors.border, true: colors.secondary }}
-                    thumbColor={item.active ? colors.primary : '#FFFFFF'}
-                  />
-                </View>
-              </View>
-            ))}
+              ))
+            )}
           </ScrollView>
         </View>
 
@@ -147,22 +214,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: radii.pill,
-    marginBottom: 14,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
-    color: colors.primaryForeground,
-  },
   closeBtn: {
     padding: 6,
     borderRadius: 16,
@@ -173,7 +224,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
     borderRadius: radii.pill,
     padding: 4,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   toggleBtn: {
     flex: 1,
@@ -195,13 +246,60 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fonts.bold,
   },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  activeFilterChip: {
+    backgroundColor: colors.secondary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fonts.semibold,
+    color: colors.mutedForeground,
+  },
+  activeFilterChipText: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: radii.pill,
+    marginBottom: 14,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
+    color: colors.primaryForeground,
+  },
   listScroll: {
     maxHeight: 380,
+  },
+  itemBlock: {
+    paddingVertical: 4,
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     gap: 12,
   },
   borderTop: {
@@ -239,5 +337,53 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     fontFamily: fonts.bold,
+  },
+  trashBtn: {
+    padding: 4,
+  },
+  confirmRow: {
+    paddingBottom: 10,
+    paddingLeft: 52,
+  },
+  confirmText: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: colors.foreground,
+    marginBottom: 8,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    backgroundColor: colors.muted,
+  },
+  cancelBtnText: {
+    fontSize: 12,
+    fontFamily: fonts.semibold,
+    color: colors.foreground,
+  },
+  deleteBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    backgroundColor: colors.expenseText,
+  },
+  deleteBtnText: {
+    fontSize: 12,
+    fontFamily: fonts.bold,
+    color: colors.primaryForeground,
+  },
+  emptyText: {
+    paddingVertical: 24,
+    textAlign: 'center',
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
   },
 });
