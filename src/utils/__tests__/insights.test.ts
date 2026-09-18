@@ -1,5 +1,5 @@
 import { CategoryItem, Transaction } from '../../types';
-import { getInsightsData } from '../insights';
+import { getInsightsMonthData } from '../insights';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
   id: 't',
@@ -24,25 +24,28 @@ const cat = (over: Partial<CategoryItem>): CategoryItem =>
     ...over,
   }) as CategoryItem;
 
-describe('getInsightsData', () => {
-  it('computes the breakdown from real transactions for the month and type', () => {
-    const categories = [cat({ id: 'c1', name: 'Food', type: 'expense' })];
+describe('getInsightsMonthData', () => {
+  it('breaks the month into expense and income breakdowns', () => {
+    const categories = [
+      cat({ id: 'c1', name: 'Food', type: 'expense' }),
+      cat({ id: 'c2', name: 'Salary', type: 'income' }),
+    ];
     const transactions = [
       tx({ type: 'expense', categoryId: 'c1', amount: 12.5, date: '2026-09-02' }),
-      tx({ type: 'income', categoryId: 'c1', amount: 99, date: '2026-09-03' }),
+      tx({ type: 'income', categoryId: 'c2', amount: 100, date: '2026-09-03' }),
+      tx({ type: 'expense', categoryId: 'c1', amount: 99, date: '2026-08-01' }),
     ];
-    const result = getInsightsData('expense', categories, transactions, '2026-09');
-    expect(result.total).toBe(12.5);
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].name).toBe('Food');
-    expect(result.items[0].percentage).toBe(100);
+    const result = getInsightsMonthData(transactions, categories, '2026-09');
+    expect(result.expense.total).toBe(12.5);
+    expect(result.expense.items).toHaveLength(1);
+    expect(result.income.total).toBe(100);
+    expect(result.income.items[0].name).toBe('Salary');
   });
 
-  it('returns an empty breakdown when there are no matching transactions', () => {
-    expect(getInsightsData('expense', [], [], '2026-09')).toEqual({
-      total: 0,
-      type: 'expense',
-      items: [],
+  it('returns empty breakdowns for a month with no transactions', () => {
+    expect(getInsightsMonthData([], [], '2026-09')).toEqual({
+      expense: { total: 0, items: [] },
+      income: { total: 0, items: [] },
     });
   });
 });

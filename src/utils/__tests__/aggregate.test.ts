@@ -1,6 +1,7 @@
 import { CategoryItem, Transaction } from '../../types';
 import {
   categoryBreakdown,
+  combinedShares,
   currentMonthKey,
   filterByMonth,
   monthBalance,
@@ -101,6 +102,16 @@ describe('categoryBreakdown', () => {
 
   it('returns empty items when the month has no matching transactions', () => {
     expect(categoryBreakdown([], [], 'expense', '2026-09')).toEqual({ total: 0, items: [] });
+  });
+});
+
+describe('combinedShares', () => {
+  it('splits totals into one-decimal percentages', () => {
+    expect(combinedShares(10, 2990)).toEqual({ expense: 0.3, income: 99.7 });
+  });
+
+  it('returns zeros when both totals are zero', () => {
+    expect(combinedShares(0, 0)).toEqual({ expense: 0, income: 0 });
   });
 });
 

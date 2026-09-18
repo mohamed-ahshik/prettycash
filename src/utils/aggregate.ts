@@ -71,6 +71,18 @@ export function categoryBreakdown(
   return { total, items };
 }
 
+export function combinedShares(
+  expenseTotal: number,
+  incomeTotal: number,
+): { expense: number; income: number } {
+  const total = expenseTotal + incomeTotal;
+  if (total <= 0) return { expense: 0, income: 0 };
+  return {
+    expense: round1((expenseTotal / total) * 100),
+    income: round1((incomeTotal / total) * 100),
+  };
+}
+
 export function monthYearFromDate(date: string): { year: number; month: number } {
   const match = /^(\d{4})-(\d{2})/.exec(date);
   const now = new Date();
