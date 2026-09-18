@@ -5,7 +5,7 @@ import { colors, fonts } from '../theme';
 import { combinedShares } from '../utils/aggregate';
 import { sectorPath, segmentAngles } from '../utils/donut';
 import { formatMoney } from '../utils/format';
-import { TypeBreakdown } from '../utils/insights';
+import { capBreakdown, TypeBreakdown } from '../utils/insights';
 import { Icon } from './Icon';
 
 interface DonutChartProps {
@@ -39,6 +39,8 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
   const outer = radius + strokeWidth / 2;
   const shares = combinedShares(expense.total, income.total);
   const isEmpty = expense.total === 0 && income.total === 0;
+  const drilledItems =
+    drill === null ? [] : capBreakdown(drill === 'expense' ? expense.items : income.items);
 
   const arcs: Arc[] = isEmpty
     ? []
@@ -47,7 +49,7 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
           { key: 'expense', color: colors.expenseText, percentage: shares.expense, onPress: () => onDrill('expense') },
           { key: 'income', color: colors.incomeText, percentage: shares.income, onPress: () => onDrill('income') },
         ]
-      : (drill === 'expense' ? expense.items : income.items).map((item) => ({
+      : drilledItems.map((item) => ({
           key: item.id,
           color: item.color,
           percentage: item.percentage,
@@ -60,7 +62,7 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
           { key: 'expense', label: 'Expense', percent: shares.expense, color: colors.expenseText, onPress: () => onDrill('expense') },
           { key: 'income', label: 'Income', percent: shares.income, color: colors.incomeText, onPress: () => onDrill('income') },
         ]
-      : (drill === 'expense' ? expense.items : income.items).map((item) => ({
+      : drilledItems.map((item) => ({
           key: item.id,
           label: item.name,
           percent: item.percentage,

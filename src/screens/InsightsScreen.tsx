@@ -55,10 +55,10 @@ export function InsightsScreen() {
         />
 
         {monthData.income.items.length > 0 ? (
-          <BreakdownCard items={monthData.income.items} type="income" />
+          <BreakdownCard items={monthData.income.items} type="income" collapsible />
         ) : null}
         {monthData.expense.items.length > 0 ? (
-          <BreakdownCard items={monthData.expense.items} type="expense" />
+          <BreakdownCard items={monthData.expense.items} type="expense" collapsible />
         ) : null}
       </ScrollView>
 

@@ -1,5 +1,5 @@
-import { CategoryItem, Transaction } from '../../types';
-import { getInsightsMonthData } from '../insights';
+import { CategoryBreakdownItem, CategoryItem, Transaction } from '../../types';
+import { capBreakdown, getInsightsMonthData } from '../insights';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
   id: 't',
@@ -47,5 +47,35 @@ describe('getInsightsMonthData', () => {
       expense: { total: 0, items: [] },
       income: { total: 0, items: [] },
     });
+  });
+});
+
+const item = (over: Partial<CategoryBreakdownItem>): CategoryBreakdownItem => ({
+  id: 'id',
+  name: 'Name',
+  amount: 1,
+  percentage: 100,
+  icon: 'receipt',
+  color: '#000000',
+  bgColor: '#FFFFFF',
+  ...over,
+});
+
+describe('capBreakdown', () => {
+  it('returns the items unchanged at or below the cap', () => {
+    const items = [item({ id: 'a' }), item({ id: 'b' })];
+    expect(capBreakdown(items, 6)).toBe(items);
+  });
+
+  it('aggregates the remainder into a single Other item when above the cap', () => {
+    const items = Array.from({ length: 8 }, (_, i) =>
+      item({ id: `c${i}`, name: `C${i}`, amount: 8 - i, percentage: ((8 - i) / 36) * 100 }),
+    );
+    const result = capBreakdown(items, 6);
+    expect(result).toHaveLength(7);
+    expect(result[6].id).toBe('other');
+    expect(result[6].name).toBe('Other');
+    expect(result[6].amount).toBe(3);
+    expect(result[6].percentage).toBeCloseTo((3 / 36) * 100, 1);
   });
 });
