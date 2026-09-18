@@ -105,20 +105,30 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
           )}
         </Svg>
 
-        {drill === null ? (
-          <View style={styles.centerHole} pointerEvents="none">
-            <Text style={styles.centerLabel}>{centerTitle}</Text>
-            <Icon name="gesture-tap" size={16} color={colors.mutedForeground} />
-          </View>
-        ) : (
-          <Pressable style={styles.centerHole} onPress={() => onDrill(null)}>
-            <Text style={styles.centerLabel}>{centerTitle}</Text>
-            {centerValue ? (
-              <Text style={styles.centerAmount} numberOfLines={1}>{centerValue}</Text>
-            ) : null}
-            <Icon name="arrow-left" size={16} color={colors.mutedForeground} />
-          </Pressable>
-        )}
+        <Pressable
+          style={styles.centerHole}
+          onPress={() =>
+            onDrill(drill === null ? 'expense' : drill === 'expense' ? 'income' : null)
+          }
+          accessibilityRole="button"
+          accessibilityLabel={
+            drill === null
+              ? 'Show expenses breakdown'
+              : drill === 'expense'
+                ? 'Show income breakdown'
+                : 'Show combined chart'
+          }
+        >
+          <Text style={styles.centerLabel}>{centerTitle}</Text>
+          {centerValue ? (
+            <Text style={styles.centerAmount} numberOfLines={1}>{centerValue}</Text>
+          ) : null}
+          <Icon
+            name={drill === null ? 'gesture-tap' : 'autorenew'}
+            size={16}
+            color={colors.mutedForeground}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.legendContainer}>
