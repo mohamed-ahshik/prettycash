@@ -16,6 +16,7 @@ const CURRENCIES = [
   { label: 'GBP (£)', code: 'GBP' },
   { label: 'JPY (¥)', code: 'JPY' },
   { label: 'CAD ($)', code: 'CAD' },
+  { label: 'SGD ($)', code: 'SGD' },
 ];
 
 export function CurrencyPickerModal({ visible, selected, onSelect, onClose }: CurrencyPickerModalProps) {

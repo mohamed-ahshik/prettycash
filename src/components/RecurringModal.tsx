@@ -35,10 +35,6 @@ export function RecurringModal({
           <View style={styles.topBar}>
             <Text style={styles.sheetTitle}>Recurring</Text>
             <View style={styles.topBarActions}>
-              <Pressable style={styles.addBtn} onPress={() => setAddVisible(true)}>
-                <Icon name="plus" size={16} color={colors.primaryForeground} />
-                <Text style={styles.addBtnText}>Add</Text>
-              </Pressable>
               <Pressable style={styles.closeBtn} onPress={onClose}>
                 <Icon name="close" size={20} color={colors.mutedForeground} />
               </Pressable>
@@ -64,6 +60,11 @@ export function RecurringModal({
               </Text>
             </Pressable>
           </View>
+
+          <Pressable style={styles.addButton} onPress={() => setAddVisible(true)}>
+            <Icon name="plus" size={16} color={colors.primaryForeground} />
+            <Text style={styles.addButtonText}>Add</Text>
+          </Pressable>
 
           {/* Items list */}
           <ScrollView style={styles.listScroll} showsVerticalScrollIndicator={false}>
@@ -99,6 +100,7 @@ export function RecurringModal({
 
         <AddRecurringModal
           visible={addVisible}
+          initialType={filter}
           onClose={() => setAddVisible(false)}
           onSave={onAddItem}
         />
@@ -145,17 +147,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  addBtn: {
+  addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 6,
     backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 12,
     borderRadius: radii.pill,
+    marginBottom: 14,
   },
-  addBtnText: {
-    fontSize: 12,
+  addButtonText: {
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: fonts.bold,
     color: colors.primaryForeground,

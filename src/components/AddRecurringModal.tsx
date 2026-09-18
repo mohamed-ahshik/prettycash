@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -16,6 +16,7 @@ import { Icon } from './Icon';
 
 interface AddRecurringModalProps {
   visible: boolean;
+  initialType?: 'expense' | 'income';
   onClose: () => void;
   onSave: (item: Omit<RecurringItem, 'id' | 'active'>) => void;
 }
@@ -28,12 +29,16 @@ const CATEGORY_OPTIONS = [
   { name: 'Income', icon: 'briefcase-outline', bg: '#E8F5E9', fg: '#2E7D32' },
 ];
 
-export function AddRecurringModal({ visible, onClose, onSave }: AddRecurringModalProps) {
+export function AddRecurringModal({ visible, initialType, onClose, onSave }: AddRecurringModalProps) {
   const [name, setName] = useState('');
-  const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [type, setType] = useState<'expense' | 'income'>(initialType ?? 'expense');
   const [amount, setAmount] = useState('');
   const [dayOfMonth, setDayOfMonth] = useState('1');
   const [selectedCategory, setSelectedCategory] = useState(CATEGORY_OPTIONS[0]);
+
+  useEffect(() => {
+    if (visible) setType(initialType ?? 'expense');
+  }, [visible, initialType]);
 
   const handleSave = () => {
     const numAmount = parseFloat(amount);
