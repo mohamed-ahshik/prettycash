@@ -1,9 +1,9 @@
 import { CategoryItem, Transaction } from '../../types';
 import {
-  allTimeBalance,
   categoryBreakdown,
   currentMonthKey,
   filterByMonth,
+  monthBalance,
   monthKey,
   monthTotals,
   monthYearFromDate,
@@ -58,14 +58,14 @@ describe('monthTotals', () => {
   });
 });
 
-describe('allTimeBalance', () => {
-  it('nets all income minus expense', () => {
+describe('monthBalance', () => {
+  it('nets income minus expense for the given month only', () => {
     const list = [
       tx({ type: 'income', amount: 5200, date: '2026-09-01' }),
       tx({ type: 'expense', amount: 2140, date: '2026-09-05' }),
       tx({ type: 'expense', amount: 100, date: '2026-08-01' }),
     ];
-    expect(allTimeBalance(list)).toBe(2960);
+    expect(monthBalance(list, '2026-09')).toBe(3060);
   });
 });
 

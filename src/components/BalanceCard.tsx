@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Mask, Pattern, Rect, Stop } from 'react-native-svg';
 import { colors, fonts, radii } from '../theme';
-import { formatMoney } from '../utils/format';
+import { formatCurrency, formatMoney } from '../utils/format';
 import { Icon } from './Icon';
 
 interface BalanceCardProps {
@@ -40,7 +40,7 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
             <Text style={styles.balanceLabel}>Total balance</Text>
             <Icon name="eye-outline" size={16} color={colors.mutedForeground} />
           </View>
-          <Text style={styles.balanceValue}>${formatMoney(total)}</Text>
+          <Text style={styles.balanceValue}>{formatCurrency(total)}</Text>
         </View>
 
         <View style={styles.split}>

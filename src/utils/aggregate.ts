@@ -30,10 +30,9 @@ export function monthTotals(
   return { income: round2(income), expense: round2(expense) };
 }
 
-export function allTimeBalance(transactions: Transaction[]): number {
-  return round2(
-    transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0),
-  );
+export function monthBalance(transactions: Transaction[], ym: string): number {
+  const { income, expense } = monthTotals(transactions, ym);
+  return round2(income - expense);
 }
 
 export function categoryBreakdown(

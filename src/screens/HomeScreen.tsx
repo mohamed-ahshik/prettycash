@@ -8,7 +8,7 @@ import { TransactionGroup } from '../components/TransactionGroup';
 import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { colors, fonts } from '../theme';
-import { allTimeBalance, filterByMonth, monthTotals } from '../utils/aggregate';
+import { filterByMonth, monthBalance, monthTotals } from '../utils/aggregate';
 import { formatHeaderDate } from '../utils/format';
 import { groupTransactionsByDay } from '../utils/groupTransactions';
 
@@ -17,7 +17,7 @@ export function HomeScreen() {
   const { month, year, setMonth } = useMonth();
   const [pickerVisible, setPickerVisible] = useState(false);
   const ym = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const balance = useMemo(() => allTimeBalance(transactions), [transactions]);
+  const balance = useMemo(() => monthBalance(transactions, ym), [transactions, ym]);
   const totals = useMemo(() => monthTotals(transactions, ym), [transactions, ym]);
   const groups = useMemo(
     () => groupTransactionsByDay(filterByMonth(transactions, ym)),
