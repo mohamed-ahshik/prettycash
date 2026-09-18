@@ -7,9 +7,3 @@ export interface CategoryBreakdownItem {
   color: string;
   bgColor: string;
 }
-
-export interface InsightsData {
-  total: number;
-  type: 'expense' | 'income';
-  items: CategoryBreakdownItem[];
-}

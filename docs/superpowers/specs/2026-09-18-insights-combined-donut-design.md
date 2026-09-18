@@ -78,10 +78,10 @@ interface DonutChartProps {
 }
 ```
 - Builds `segments` from `drill`:
-  - combined → `[{ color: expenseText, percentage: shares.expense, onPress: () => onDrill('expense') }, { color: incomeText, percentage: shares.income, onPress: () => onDrill('income') }]`.
+  - combined → `[{ color: expenseText, percentage: shares.expense }, { color: incomeText, percentage: shares.income }]`.
   - drilled → that type's `items` mapped to `{ color: item.color, percentage: item.percentage }` (no per-arc press).
-- Renders arcs with `strokeDasharray`/`strokeDashoffset` (as today); arc `onPress` uses react-native-svg's touch support.
-- Center `Pressable` (the existing hole): combined → static hint; drilled → calls `onDrill(null)`.
+- Renders arcs with `strokeDasharray`/`strokeDashoffset` (as today). Per-arc SVG hit-testing is unavailable (react-native-svg hit-tests each `Circle` as its full geometry, not its dashed arc), so taps are resolved by angle from the touch point via `donutHit`: arc/legend taps select a type; a tap on the ring or center while drilled returns to combined.
+- Center hole is a plain `View` (the container is the responder): combined → static hint; drilled → a ring tap returns to combined.
 - Legend is also rendered by `DonutChart`; each legend row is a `Pressable` calling `onDrill(...)` in combined mode (inert while drilled).
 - Empty (both totals `0`): render only the muted base ring, center hint `No data`, empty legend.
 

@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BreakdownCard } from '../components/BreakdownCard';
@@ -28,10 +28,6 @@ export function InsightsScreen() {
     [...expenseCategories, ...incomeCategories],
     ym,
   );
-
-  useEffect(() => {
-    setDrill(null);
-  }, [ym]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -74,6 +70,7 @@ export function InsightsScreen() {
         onSelect={(m, y) => {
           setSelectedMonth(m);
           setSelectedYear(y);
+          setDrill(null);
         }}
       />
     </SafeAreaView>

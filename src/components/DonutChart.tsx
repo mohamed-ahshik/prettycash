@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 import { colors, fonts } from '../theme';
 import { combinedShares } from '../utils/aggregate';
+import { donutHit } from '../utils/donut';
 import { formatMoney } from '../utils/format';
 import { TypeBreakdown } from '../utils/insights';
 import { Icon } from './Icon';
@@ -18,7 +19,6 @@ interface Arc {
   key: string;
   color: string;
   percentage: number;
-  onPress?: () => void;
 }
 
 interface LegendEntry {
@@ -35,14 +35,24 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
+  const inner = radius - strokeWidth / 2;
+  const outer = radius + strokeWidth / 2;
   const shares = combinedShares(expense.total, income.total);
   const isEmpty = expense.total === 0 && income.total === 0;
 
-  const arcs: Arc[] =
-    drill === null
+  const combinedSegments = isEmpty
+    ? []
+    : [
+        { key: 'expense', percentage: shares.expense },
+        { key: 'income', percentage: shares.income },
+      ];
+
+  const arcs: Arc[] = isEmpty
+    ? []
+    : drill === null
       ? [
-          { key: 'expense', color: colors.expenseText, percentage: shares.expense, onPress: () => onDrill('expense') },
-          { key: 'income', color: colors.incomeText, percentage: shares.income, onPress: () => onDrill('income') },
+          { key: 'expense', color: colors.expenseText, percentage: shares.expense },
+          { key: 'income', color: colors.incomeText, percentage: shares.income },
         ]
       : (drill === 'expense' ? expense.items : income.items).map((item) => ({
           key: item.id,
@@ -73,13 +83,33 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
   const centerValue = drill === null
     ? undefined
     : formatMoney(drill === 'expense' ? expense.total : income.total);
-  const centerOnPress = drill === null ? undefined : () => onDrill(null);
+
+  const handleTap = (x: number, y: number) => {
+    const hit = donutHit(x, y, center, inner, outer, drill === null ? combinedSegments : [{ key: 'ring', percentage: 100 }]);
+    if (hit === null) return;
+    if (drill !== null) {
+      onDrill(null);
+      return;
+    }
+    if (hit === 'expense' || hit === 'income') onDrill(hit);
+  };
 
   let accumulatedPercent = 0;
 
   return (
     <View style={styles.card}>
-      <View style={styles.chartContainer}>
+      <View
+        style={styles.chartContainer}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={
+          drill === null
+            ? 'Income and expense chart. Tap a segment to see categories.'
+            : `${centerTitle} breakdown. Tap to return.`
+        }
+        onStartShouldSetResponder={() => true}
+        onResponderRelease={(e) => handleTap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
+      >
         <Svg width={size} height={size}>
           <G transform={`rotate(-90 ${center} ${center})`}>
             <Circle
@@ -107,14 +137,13 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
                   strokeDashoffset={strokeDashoffset}
                   fill="transparent"
                   strokeLinecap="round"
-                  onPress={arc.onPress}
                 />
               );
             })}
           </G>
         </Svg>
 
-        <Pressable style={styles.centerHole} onPress={centerOnPress} disabled={!centerOnPress}>
+        <View style={styles.centerHole} pointerEvents="none">
           <Text style={styles.centerLabel}>{centerTitle}</Text>
           {centerValue ? (
             <Text style={styles.centerAmount} numberOfLines={1}>{centerValue}</Text>
@@ -124,7 +153,7 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
             size={16}
             color={colors.mutedForeground}
           />
-        </Pressable>
+        </View>
       </View>
 
       <View style={styles.legendContainer}>
@@ -195,6 +224,9 @@ const styles = StyleSheet.create({
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 44,
+    paddingVertical: 6,
+    justifyContent: 'center',
     gap: 8,
   },
   legendDot: {
