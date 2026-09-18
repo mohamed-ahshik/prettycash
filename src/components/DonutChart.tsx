@@ -98,19 +98,8 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
 
   return (
     <View style={styles.card}>
-      <View
-        style={styles.chartContainer}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel={
-          drill === null
-            ? 'Income and expense chart. Tap a segment to see categories.'
-            : `${centerTitle} breakdown. Tap to return.`
-        }
-        onStartShouldSetResponder={() => true}
-        onResponderRelease={(e) => handleTap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
-      >
-        <Svg width={size} height={size}>
+      <View style={styles.chartContainer}>
+        <Svg width={size} height={size} pointerEvents="none">
           <G transform={`rotate(-90 ${center} ${center})`}>
             <Circle
               cx={center}
@@ -142,6 +131,17 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
             })}
           </G>
         </Svg>
+
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={(e) => handleTap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            drill === null
+              ? 'Income and expense chart. Tap a segment to see categories.'
+              : `${centerTitle} breakdown. Tap to return.`
+          }
+        />
 
         <View style={styles.centerHole} pointerEvents="none">
           <Text style={styles.centerLabel}>{centerTitle}</Text>
