@@ -303,22 +303,23 @@ import { currentMonthKey } from '../utils/aggregate';
 import { formatMonthFromDate } from '../utils/format';
 ```
 
-Add the prop to the interface:
+Add the props to the interface:
 
 ```ts
   receiptDate?: string;
+  initialDate?: string;
 ```
 
-Destructure it:
+Destructure them:
 
 ```ts
-export function TransactionForm({ initial, receiptDate, onSubmit, onCancel }: TransactionFormProps) {
+export function TransactionForm({ initial, receiptDate, initialDate, onSubmit, onCancel }: TransactionFormProps) {
 ```
 
-Change the date initializer so it always defaults to today:
+Change the date initializer so an explicit `initialDate` wins (edit mode) and otherwise defaults to today:
 
 ```ts
-  const [date, setDate] = useState(todayString());
+  const [date, setDate] = useState(initialDate ?? todayString());
 ```
 
 Compute the hint/disclaimer just above the `return`:
