@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { colors, fonts } from '../theme';
 import { combinedShares } from '../utils/aggregate';
-import { donutHit } from '../utils/donut';
+import { sectorPath, segmentAngles } from '../utils/donut';
 import { formatMoney } from '../utils/format';
 import { TypeBreakdown } from '../utils/insights';
 import { Icon } from './Icon';
@@ -19,6 +19,7 @@ interface Arc {
   key: string;
   color: string;
   percentage: number;
+  onPress: () => void;
 }
 
 interface LegendEntry {
@@ -33,31 +34,24 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
   const size = 140;
   const strokeWidth = 16;
   const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
   const center = size / 2;
   const inner = radius - strokeWidth / 2;
   const outer = radius + strokeWidth / 2;
   const shares = combinedShares(expense.total, income.total);
   const isEmpty = expense.total === 0 && income.total === 0;
 
-  const combinedSegments = isEmpty
-    ? []
-    : [
-        { key: 'expense', percentage: shares.expense },
-        { key: 'income', percentage: shares.income },
-      ];
-
   const arcs: Arc[] = isEmpty
     ? []
     : drill === null
       ? [
-          { key: 'expense', color: colors.expenseText, percentage: shares.expense },
-          { key: 'income', color: colors.incomeText, percentage: shares.income },
+          { key: 'expense', color: colors.expenseText, percentage: shares.expense, onPress: () => onDrill('expense') },
+          { key: 'income', color: colors.incomeText, percentage: shares.income, onPress: () => onDrill('income') },
         ]
       : (drill === 'expense' ? expense.items : income.items).map((item) => ({
           key: item.id,
           color: item.color,
           percentage: item.percentage,
+          onPress: () => onDrill(null),
         }));
 
   const legend: LegendEntry[] =
@@ -84,23 +78,13 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
     ? undefined
     : formatMoney(drill === 'expense' ? expense.total : income.total);
 
-  const handleTap = (x: number, y: number) => {
-    const hit = donutHit(x, y, center, inner, outer, drill === null ? combinedSegments : [{ key: 'ring', percentage: 100 }]);
-    if (hit === null) return;
-    if (drill !== null) {
-      onDrill(null);
-      return;
-    }
-    if (hit === 'expense' || hit === 'income') onDrill(hit);
-  };
-
-  let accumulatedPercent = 0;
+  const angles = segmentAngles(arcs.map((arc) => ({ key: arc.key, percentage: arc.percentage })));
 
   return (
     <View style={styles.card}>
       <View style={styles.chartContainer}>
-        <Svg width={size} height={size} pointerEvents="none">
-          <G transform={`rotate(-90 ${center} ${center})`}>
+        <Svg width={size} height={size}>
+          {isEmpty ? (
             <Circle
               cx={center}
               cy={center}
@@ -109,55 +93,36 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
               strokeWidth={strokeWidth}
               fill="transparent"
             />
-            {arcs.map((arc) => {
-              const strokeDasharray = `${(arc.percentage / 100) * circumference} ${circumference}`;
-              const strokeDashoffset = -((accumulatedPercent / 100) * circumference);
-              accumulatedPercent += arc.percentage;
-
-              return (
-                <Circle
-                  key={arc.key}
-                  cx={center}
-                  cy={center}
-                  r={radius}
-                  stroke={arc.color}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={strokeDasharray}
-                  strokeDashoffset={strokeDashoffset}
-                  fill="transparent"
-                  strokeLinecap="round"
-                />
-              );
-            })}
-          </G>
+          ) : (
+            arcs.map((arc, index) => (
+              <Path
+                key={arc.key}
+                d={sectorPath(center, center, inner, outer, angles[index].start, angles[index].end)}
+                fill={arc.color}
+                onPress={arc.onPress}
+              />
+            ))
+          )}
         </Svg>
 
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={(e) => handleTap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
-          accessibilityRole="button"
-          accessibilityLabel={
-            drill === null
-              ? 'Income and expense chart. Tap a segment to see categories.'
-              : `${centerTitle} breakdown. Tap to return.`
-          }
-        />
-
-        <View style={styles.centerHole} pointerEvents="none">
-          <Text style={styles.centerLabel}>{centerTitle}</Text>
-          {centerValue ? (
-            <Text style={styles.centerAmount} numberOfLines={1}>{centerValue}</Text>
-          ) : null}
-          <Icon
-            name={drill === null ? 'gesture-tap' : 'arrow-left'}
-            size={16}
-            color={colors.mutedForeground}
-          />
-        </View>
+        {drill === null ? (
+          <View style={styles.centerHole} pointerEvents="none">
+            <Text style={styles.centerLabel}>{centerTitle}</Text>
+            <Icon name="gesture-tap" size={16} color={colors.mutedForeground} />
+          </View>
+        ) : (
+          <Pressable style={styles.centerHole} onPress={() => onDrill(null)}>
+            <Text style={styles.centerLabel}>{centerTitle}</Text>
+            {centerValue ? (
+              <Text style={styles.centerAmount} numberOfLines={1}>{centerValue}</Text>
+            ) : null}
+            <Icon name="arrow-left" size={16} color={colors.mutedForeground} />
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.legendContainer}>
-        {isEmpty && drill === null ? (
+        {isEmpty ? (
           <Text style={styles.emptyLegend}>No transactions this month</Text>
         ) : (
           legend.map((entry) => (
