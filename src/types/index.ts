@@ -19,6 +19,7 @@ export interface Transaction {
   note?: string;
   items?: LineItem[];
   receiptPath?: string;
+  receiptData?: unknown;
 }
 
 export interface TransactionGroup {

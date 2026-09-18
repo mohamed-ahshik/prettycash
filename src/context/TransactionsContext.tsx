@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Transaction, TransactionGroup } from '../types';
-import { listTransactions, insertTransaction } from '../data/repositories/transactionsRepo';
+import {
+  listTransactions,
+  insertTransaction,
+  updateTransaction as updateTransactionRepo,
+  deleteTransaction as deleteTransactionRepo,
+} from '../data/repositories/transactionsRepo';
 import { groupTransactionsByDay } from '../utils/groupTransactions';
 import { useAuth } from './AuthContext';
 
@@ -8,6 +13,8 @@ interface TransactionsContextType {
   transactions: Transaction[];
   groups: TransactionGroup[];
   addTransaction: (input: Omit<Transaction, 'id'>) => Promise<void>;
+  updateTransaction: (id: string, input: Omit<Transaction, 'id'>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
   loading: boolean;
   error: string | null;
 }
@@ -50,10 +57,22 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     setTransactions((prev) => [created, ...prev]);
   };
 
+  const updateTransaction = async (id: string, input: Omit<Transaction, 'id'>) => {
+    const updated = await updateTransactionRepo(id, input);
+    setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)));
+  };
+
+  const deleteTransaction = async (id: string) => {
+    await deleteTransactionRepo(id);
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+  };
+
   const groups = useMemo(() => groupTransactionsByDay(transactions), [transactions]);
 
   return (
-    <TransactionsContext.Provider value={{ transactions, groups, addTransaction, loading, error }}>
+    <TransactionsContext.Provider
+      value={{ transactions, groups, addTransaction, updateTransaction, deleteTransaction, loading, error }}
+    >
       {children}
     </TransactionsContext.Provider>
   );

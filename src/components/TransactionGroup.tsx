@@ -1,15 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { TransactionGroup as TransactionGroupType } from '../types';
+import { Transaction, TransactionGroup as TransactionGroupType } from '../types';
 import { colors, fonts } from '../theme';
 import { formatSignedMoney } from '../utils/format';
 import { TransactionRow } from './TransactionRow';
 
 interface TransactionGroupProps {
   group: TransactionGroupType;
+  onPressTransaction?: (t: Transaction) => void;
 }
 
-export function TransactionGroup({ group }: TransactionGroupProps) {
+export function TransactionGroup({ group, onPressTransaction }: TransactionGroupProps) {
   if (group.transactions.length === 0) {
     return null;
   }
@@ -23,7 +24,11 @@ export function TransactionGroup({ group }: TransactionGroupProps) {
         <Text style={[styles.total, { color: totalColor }]}>{formatSignedMoney(group.total)}</Text>
       </View>
       {group.transactions.map((transaction) => (
-        <TransactionRow key={transaction.id} transaction={transaction} />
+        <TransactionRow
+          key={transaction.id}
+          transaction={transaction}
+          onPress={() => onPressTransaction?.(transaction)}
+        />
       ))}
     </View>
   );

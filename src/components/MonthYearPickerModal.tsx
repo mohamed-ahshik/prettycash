@@ -1,12 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, radii } from '../theme';
+import { MONTH_NAMES } from '../utils/format';
 import { Icon } from './Icon';
-
-export const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec',
-];
 
 interface MonthYearPickerModalProps {
   visible: boolean;

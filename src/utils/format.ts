@@ -1,3 +1,15 @@
+import { monthYearFromDate } from './aggregate';
+
+export const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec',
+];
+
+export function formatMonthFromDate(date: string): string {
+  const { year, month } = monthYearFromDate(date);
+  return `${MONTH_NAMES[month]} ${year}`;
+}
+
 export function formatMoney(value: number): string {
   return Number.isInteger(value)
     ? value.toLocaleString('en-US')

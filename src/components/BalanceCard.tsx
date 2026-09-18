@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Mask, Pattern, Rect, Stop } from 'react-native-svg';
 import { colors, fonts, radii } from '../theme';
 import { formatCurrency, formatMoney } from '../utils/format';
+import { useBalanceVisibility } from '../hooks/useBalanceVisibility';
+import { BALANCE_MASK, EXPENSE_MASK, INCOME_MASK } from '../lib/balanceVisibility';
 import { Icon } from './Icon';
 
 interface BalanceCardProps {
@@ -12,6 +14,8 @@ interface BalanceCardProps {
 }
 
 export function BalanceCard({ total, income, expense }: BalanceCardProps) {
+  const { hidden, toggle } = useBalanceVisibility();
+
   return (
     <View style={styles.stack}>
       <View style={[styles.backdrop, styles.backdropOuter]} />
@@ -38,9 +42,20 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
         <View style={styles.topRow}>
           <View style={styles.balanceLabelRow}>
             <Text style={styles.balanceLabel}>Total balance</Text>
-            <Icon name="eye-outline" size={16} color={colors.mutedForeground} />
+            <Pressable
+              onPress={toggle}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={hidden ? 'Show balance' : 'Hide balance'}
+            >
+              <Icon
+                name={hidden ? 'eye-off-outline' : 'eye-outline'}
+                size={16}
+                color={colors.mutedForeground}
+              />
+            </Pressable>
           </View>
-          <Text style={styles.balanceValue}>{formatCurrency(total)}</Text>
+          <Text style={styles.balanceValue}>{hidden ? BALANCE_MASK : formatCurrency(total)}</Text>
         </View>
 
         <View style={styles.split}>
@@ -50,7 +65,7 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
             </View>
             <View>
               <Text style={styles.splitLabel}>Income</Text>
-              <Text style={styles.splitValue}>+${formatMoney(income)}</Text>
+              <Text style={styles.splitValue}>{hidden ? INCOME_MASK : `+$${formatMoney(income)}`}</Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -60,7 +75,7 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
             </View>
             <View>
               <Text style={styles.splitLabel}>Expense</Text>
-              <Text style={styles.splitValue}>${formatMoney(expense)}</Text>
+              <Text style={styles.splitValue}>{hidden ? EXPENSE_MASK : `$${formatMoney(expense)}`}</Text>
             </View>
           </View>
         </View>

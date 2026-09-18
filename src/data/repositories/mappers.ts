@@ -28,6 +28,7 @@ export function mapTransactionRow(row: any): Transaction {
     icon: row.icon ?? 'receipt',
     note: row.note ?? undefined,
     receiptPath: row.receipt_path ?? undefined,
+    receiptData: row.receipt_data ?? undefined,
     items: Array.isArray(row.transaction_items) && row.transaction_items.length
       ? row.transaction_items.map(mapLineItemRow)
       : undefined,

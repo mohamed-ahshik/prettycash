@@ -11,6 +11,7 @@ it('maps a transaction row and its items', () => {
   const row = {
     id: 't1', name: 'Whole Foods', date: '2026-09-13', time: '9:42 AM',
     category_id: 'c1', type: 'expense', amount: 42.5, icon: 'cart-outline', note: null, receipt_path: null,
+    receipt_data: { merchant: 'Whole Foods', amount: 42.5, date: '2026-09-13' },
     transaction_items: [
       { id: 'i1', name: 'Milk', quantity: 2, price: 3.0 },
       { id: 'i2', name: 'Eggs', quantity: null, price: 2.5 },
@@ -19,6 +20,7 @@ it('maps a transaction row and its items', () => {
   expect(mapTransactionRow(row)).toEqual({
     id: 't1', name: 'Whole Foods', date: '2026-09-13', time: '9:42 AM',
     categoryId: 'c1', type: 'expense', amount: 42.5, icon: 'cart-outline', note: undefined,
+    receiptData: { merchant: 'Whole Foods', amount: 42.5, date: '2026-09-13' },
     items: [
       { id: 'i1', name: 'Milk', quantity: 2, price: 3.0 },
       { id: 'i2', name: 'Eggs', quantity: undefined, price: 2.5 },

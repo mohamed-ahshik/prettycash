@@ -34,6 +34,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receiptPath, setReceiptPath] = useState<string | null>(null);
+  const [receiptData, setReceiptData] = useState<unknown>(null);
   const requestToken = useRef(0);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
       setDraft(null);
       setError(null);
       setReceiptPath(null);
+      setReceiptData(null);
     }
   }, [visible]);
 
@@ -52,6 +54,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setDraft(null);
     setError(null);
     setReceiptPath(null);
+    setReceiptData(null);
 
     try {
       const path = await uploadReceipt(base64, mimeType);
@@ -65,9 +68,10 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     }
 
     try {
-      const result = await analyzeReceipt(base64, mimeType);
+      const { draft: result, raw } = await analyzeReceipt(base64, mimeType);
       if (token !== requestToken.current) return;
       setDraft(result);
+      setReceiptData(raw);
       setError(null);
       setFlow('form');
     } catch (e) {
@@ -82,12 +86,13 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setDraft(null);
     setError(null);
     setReceiptPath(null);
+    setReceiptData(null);
     setFlow('form');
   };
 
   const handleSubmit = async (input: Omit<Transaction, 'id'>) => {
     try {
-      await addTransaction({ ...input, receiptPath: receiptPath ?? undefined });
+      await addTransaction({ ...input, receiptPath: receiptPath ?? undefined, receiptData: receiptData ?? undefined });
       const { year, month } = monthYearFromDate(input.date);
       setMonth(month, year);
       onClose();
@@ -167,6 +172,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
               <TransactionForm
                 initial={draft ?? undefined}
+                receiptDate={draft?.date}
                 onSubmit={handleSubmit}
                 onCancel={onClose}
               />

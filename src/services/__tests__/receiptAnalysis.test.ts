@@ -61,20 +61,19 @@ it('formats a non-analysis error generically', () => {
   expect(formatAnalysisError(new Error('boom'))).toBe('Receipt analysis failed.');
 });
 
-it('enqueues then polls and returns the normalized draft on completed', async () => {
+it('enqueues then polls and returns the normalized draft plus the raw result', async () => {
+  const result = { merchant: 'Cafe', amount: 9.5, note: '', items: [] };
   const fetchMock = jest
     .fn()
     .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
-    .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: 'completed', result: { merchant: 'Cafe', amount: 9.5, note: '', items: [] } }),
-    });
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'completed', result }) });
   globalThis.fetch = fetchMock as any;
 
   const out = await analyzeReceipt('b64', 'image/jpeg');
 
-  expect(out.merchant).toBe('Cafe');
-  expect(out.amount).toBe(9.5);
+  expect(out.draft.merchant).toBe('Cafe');
+  expect(out.draft.amount).toBe(9.5);
+  expect(out.raw).toEqual(result);
   expect(fetchMock).toHaveBeenCalledTimes(2);
   expect(fetchMock.mock.calls[0][0]).toBe('https://vision.test/analyze-receipt');
   expect(fetchMock.mock.calls[1][0]).toBe('https://vision.test/jobs/j1');

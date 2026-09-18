@@ -18,7 +18,7 @@
 - Insights keeps its own month state; the Home month picker is unchanged.
 - The working tree may contain unrelated uncommitted changes; stage only the files each task names. The new migration must be applied with `supabase db push --linked --yes`.
 
-**Implementation status:** Not started
+**Implementation status:** Implemented
 
 ---
 

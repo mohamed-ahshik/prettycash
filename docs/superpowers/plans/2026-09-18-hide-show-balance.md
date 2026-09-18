@@ -17,7 +17,7 @@
 - Persist device-locally only (no Supabase schema change).
 - The working tree may contain unrelated uncommitted changes; stage only the files each task names.
 
-**Implementation status:** Not started
+**Implementation status:** Implemented
 
 ---
 

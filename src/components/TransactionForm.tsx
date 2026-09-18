@@ -10,11 +10,20 @@ import {
 import { useCategories } from '../context/CategoriesContext';
 import { colors, fonts, radii } from '../theme';
 import { LineItem, ReceiptDraft, Transaction, TransactionType } from '../types';
+import { currentMonthKey } from '../utils/aggregate';
+import { formatMonthFromDate } from '../utils/format';
 import { Icon } from './Icon';
 import { SegmentedControl } from './SegmentedControl';
 
 interface TransactionFormProps {
   initial?: Partial<ReceiptDraft>;
+  initialType?: TransactionType;
+  initialCategoryId?: string;
+  initialDate?: string;
+  title?: string;
+  submitLabel?: string;
+  receiptDate?: string;
+  onDelete?: () => void;
   onSubmit: (input: Omit<Transaction, 'id'>) => void;
   onCancel: () => void;
 }
@@ -49,7 +58,18 @@ function to12hTime(value: string): string {
   return `${hours}:${minutes} ${ampm}`;
 }
 
-export function TransactionForm({ initial, onSubmit, onCancel }: TransactionFormProps) {
+export function TransactionForm({
+  initial,
+  initialType,
+  initialCategoryId,
+  initialDate,
+  title = 'Add Transaction',
+  submitLabel = 'Save',
+  receiptDate,
+  onDelete,
+  onSubmit,
+  onCancel,
+}: TransactionFormProps) {
   const { expenseCategories, incomeCategories } = useCategories();
 
   const initialItems: LineItem[] = (initial?.items ?? []).map((it) => ({
@@ -61,14 +81,15 @@ export function TransactionForm({ initial, onSubmit, onCancel }: TransactionForm
 
   const [name, setName] = useState(initial?.merchant ?? '');
   const [amount, setAmount] = useState(initial?.amount !== undefined ? String(initial.amount) : '');
-  const [date, setDate] = useState(initial?.date || todayString());
+  const [date, setDate] = useState(initialDate ?? todayString());
   const [time, setTime] = useState(initial?.time ? to12hTime(initial.time) : currentTimeString());
   const [note, setNote] = useState(initial?.note ?? '');
   const [items, setItems] = useState<LineItem[]>(initialItems);
-  const [type, setType] = useState<TransactionType>('expense');
+  const [type, setType] = useState<TransactionType>(initialType ?? 'expense');
   const [categoryId, setCategoryId] = useState<string | null>(
-    expenseCategories[0]?.id ?? null
+    initialCategoryId ?? expenseCategories[0]?.id ?? null
   );
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const categories = type === 'expense' ? expenseCategories : incomeCategories;
   const valid = name.trim().length > 0 && Number(amount) > 0;
@@ -106,10 +127,14 @@ export function TransactionForm({ initial, onSubmit, onCancel }: TransactionForm
     });
   };
 
+  const showReceiptDateHint = Boolean(receiptDate) && receiptDate !== date;
+  const hasMonth = /^\d{4}-\d{2}/.test(date);
+  const showMonthDisclaimer = hasMonth && date.slice(0, 7) !== currentMonthKey();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Add Transaction</Text>
+        <Text style={styles.title}>{title}</Text>
         <Pressable style={styles.closeButton} onPress={onCancel}>
           <Icon name="close" size={20} color={colors.mutedForeground} />
         </Pressable>
@@ -163,6 +188,21 @@ export function TransactionForm({ initial, onSubmit, onCancel }: TransactionForm
             />
           </View>
         </View>
+
+        {showReceiptDateHint ? (
+          <View style={styles.receiptDateRow}>
+            <Text style={styles.receiptDateText}>Receipt date: {receiptDate}</Text>
+            <Pressable onPress={() => setDate(receiptDate as string)}>
+              <Text style={styles.receiptDateUse}>Use</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {showMonthDisclaimer ? (
+          <Text style={styles.monthDisclaimer}>
+            This transaction will be recorded under {formatMonthFromDate(date)}.
+          </Text>
+        ) : null}
 
         <Text style={styles.fieldLabel}>Category</Text>
         <View style={styles.categoryGrid}>
@@ -240,12 +280,32 @@ export function TransactionForm({ initial, onSubmit, onCancel }: TransactionForm
         </Pressable>
       </ScrollView>
 
+      {onDelete ? (
+        confirmDelete ? (
+          <View style={styles.deleteConfirm}>
+            <Text style={styles.deleteConfirmText}>Delete this transaction?</Text>
+            <View style={styles.deleteConfirmActions}>
+              <Pressable style={styles.deleteCancel} onPress={() => setConfirmDelete(false)}>
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.deleteConfirmButton} onPress={onDelete}>
+                <Text style={styles.deleteConfirmButtonText}>Delete</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable style={styles.deleteButton} onPress={() => setConfirmDelete(true)}>
+            <Text style={styles.deleteButtonText}>Delete transaction</Text>
+          </Pressable>
+        )
+      ) : null}
+
       <Pressable
         style={[styles.saveButton, !valid && styles.saveButtonDisabled]}
         disabled={!valid}
         onPress={handleSubmit}
       >
-        <Text style={styles.saveButtonText}>Save</Text>
+        <Text style={styles.saveButtonText}>{submitLabel}</Text>
       </Pressable>
     </View>
   );
@@ -304,6 +364,28 @@ const styles = StyleSheet.create({
   },
   dateField: {
     flex: 1,
+  },
+  receiptDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  receiptDateText: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
+  },
+  receiptDateUse: {
+    fontSize: 12,
+    fontFamily: fonts.bold,
+    color: colors.primary,
+  },
+  monthDisclaimer: {
+    marginTop: 6,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
   },
   categoryGrid: {
     flexDirection: 'row',
@@ -380,6 +462,61 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: fonts.semibold,
     color: colors.primary,
+  },
+  deleteButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    fontFamily: fonts.semibold,
+    color: colors.expenseText,
+  },
+  deleteConfirm: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.muted,
+  },
+  deleteConfirmText: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: colors.foreground,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  deleteConfirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  deleteCancel: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  deleteCancelText: {
+    fontSize: 13,
+    fontFamily: fonts.semibold,
+    color: colors.foreground,
+  },
+  deleteConfirmButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    backgroundColor: colors.expenseText,
+  },
+  deleteConfirmButtonText: {
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    color: colors.primaryForeground,
   },
   saveButton: {
     backgroundColor: colors.primary,

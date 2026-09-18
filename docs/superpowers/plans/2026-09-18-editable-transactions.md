@@ -19,7 +19,7 @@
 - No native `Alert` for delete (keep web parity) — use an inline confirmation.
 - The working tree may contain unrelated uncommitted changes; stage only the files each task names.
 
-**Implementation status:** Not started
+**Implementation status:** Implemented
 
 ---
 

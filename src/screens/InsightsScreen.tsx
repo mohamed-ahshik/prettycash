@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BreakdownCard } from '../components/BreakdownCard';
 import { DonutChart } from '../components/DonutChart';
 import { Icon } from '../components/Icon';
-import { MONTH_NAMES, MonthYearPickerModal } from '../components/MonthYearPickerModal';
+import { MonthYearPickerModal } from '../components/MonthYearPickerModal';
 import { useCategories } from '../context/CategoriesContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { colors, fonts } from '../theme';
+import { MONTH_NAMES } from '../utils/format';
 import { getInsightsData } from '../utils/insights';
 
 export function InsightsScreen() {

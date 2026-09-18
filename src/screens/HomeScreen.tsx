@@ -2,20 +2,23 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BalanceCard } from '../components/BalanceCard';
+import { EditTransactionSheet } from '../components/EditTransactionSheet';
 import { MonthPicker } from '../components/MonthPicker';
-import { MONTH_NAMES, MonthYearPickerModal } from '../components/MonthYearPickerModal';
+import { MonthYearPickerModal } from '../components/MonthYearPickerModal';
 import { TransactionGroup } from '../components/TransactionGroup';
 import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { colors, fonts } from '../theme';
+import { Transaction } from '../types';
 import { filterByMonth, monthBalance, monthTotals } from '../utils/aggregate';
-import { formatHeaderDate } from '../utils/format';
+import { formatHeaderDate, MONTH_NAMES } from '../utils/format';
 import { groupTransactionsByDay } from '../utils/groupTransactions';
 
 export function HomeScreen() {
   const { transactions } = useTransactions();
   const { month, year, setMonth } = useMonth();
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
   const ym = `${year}-${String(month + 1).padStart(2, '0')}`;
   const balance = useMemo(() => monthBalance(transactions, ym), [transactions, ym]);
   const totals = useMemo(() => monthTotals(transactions, ym), [transactions, ym]);
@@ -51,7 +54,11 @@ export function HomeScreen() {
             <Text style={styles.emptyText}>No transactions</Text>
           ) : (
             groups.map((group) => (
-              <TransactionGroup key={group.label} group={group} />
+              <TransactionGroup
+                key={group.label}
+                group={group}
+                onPressTransaction={setEditing}
+              />
             ))
           )}
         </View>
@@ -64,6 +71,8 @@ export function HomeScreen() {
         onClose={() => setPickerVisible(false)}
         onSelect={(m, y) => setMonth(m, y)}
       />
+
+      <EditTransactionSheet transaction={editing} onClose={() => setEditing(null)} />
     </SafeAreaView>
   );
 }

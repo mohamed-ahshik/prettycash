@@ -10,6 +10,11 @@ export class ReceiptAnalysisError extends Error {
   }
 }
 
+export interface AnalyzedReceipt {
+  draft: ReceiptDraft;
+  raw: unknown;
+}
+
 export function formatAnalysisError(e: unknown): string {
   return e instanceof ReceiptAnalysisError
     ? `${e.message} (${e.code})`
@@ -51,7 +56,7 @@ async function toError(res: Response): Promise<ReceiptAnalysisError> {
   return new ReceiptAnalysisError(code, message);
 }
 
-export async function analyzeReceipt(imageBase64: string, mimeType: string): Promise<ReceiptDraft> {
+export async function analyzeReceipt(imageBase64: string, mimeType: string): Promise<AnalyzedReceipt> {
   const { baseUrl, apiKey } = getVisionConfig();
   if (!baseUrl || !apiKey) {
     throw new ReceiptAnalysisError('NOT_CONFIGURED', 'Vision backend is not configured.');
@@ -87,7 +92,7 @@ export async function analyzeReceipt(imageBase64: string, mimeType: string): Pro
 
     const body = await pollRes.json();
     if (body?.status === 'completed') {
-      return normalizeReceiptDraft(body.result);
+      return { draft: normalizeReceiptDraft(body.result), raw: body.result };
     }
     if (body?.status === 'failed') {
       throw new ReceiptAnalysisError('FAILED', body?.error?.message ?? 'Receipt analysis failed.');
