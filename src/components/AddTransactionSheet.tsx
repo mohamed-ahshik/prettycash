@@ -12,6 +12,7 @@ import {
 import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { uploadReceipt } from '../data/repositories/storageRepo';
+import { hapticSuccess } from '../lib/haptics';
 import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
 import { colors, fonts, radii } from '../theme';
 import { ReceiptDraft, Transaction } from '../types';
@@ -95,6 +96,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
       await addTransaction({ ...input, receiptPath: receiptPath ?? undefined, receiptData: receiptData ?? undefined });
       const { year, month } = monthYearFromDate(input.date);
       setMonth(month, year);
+      hapticSuccess();
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save transaction.');

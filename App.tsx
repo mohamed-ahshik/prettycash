@@ -14,6 +14,7 @@ import { MonthProvider } from './src/context/MonthContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
+import { setHapticsEnabled } from './src/lib/haptics';
 import { CategoriesScreen } from './src/screens/CategoriesScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
@@ -97,6 +98,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const existing = await getProfile();
+        setHapticsEnabled(existing?.hapticsEnabled ?? true);
         if (!existing && user) {
           const meta = user.user_metadata ?? {};
           const name = (meta.full_name as string) || (meta.name as string) || user.email || 'You';

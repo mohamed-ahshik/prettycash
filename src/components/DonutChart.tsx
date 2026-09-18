@@ -4,6 +4,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { colors, fonts } from '../theme';
 import { combinedShares } from '../utils/aggregate';
 import { sectorPath, segmentAngles } from '../utils/donut';
+import { hapticSelection } from '../lib/haptics';
 import { formatMoney } from '../utils/format';
 import { capBreakdown, TypeBreakdown } from '../utils/insights';
 import { Icon } from './Icon';
@@ -42,25 +43,30 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
   const drilledItems =
     drill === null ? [] : capBreakdown(drill === 'expense' ? expense.items : income.items);
 
+  const handleDrill = (next: 'expense' | 'income' | null) => {
+    hapticSelection();
+    onDrill(next);
+  };
+
   const arcs: Arc[] = isEmpty
     ? []
     : drill === null
       ? [
-          { key: 'expense', color: colors.expenseText, percentage: shares.expense, onPress: () => onDrill('expense') },
-          { key: 'income', color: colors.incomeText, percentage: shares.income, onPress: () => onDrill('income') },
+          { key: 'expense', color: colors.expenseText, percentage: shares.expense, onPress: () => handleDrill('expense') },
+          { key: 'income', color: colors.incomeText, percentage: shares.income, onPress: () => handleDrill('income') },
         ]
       : drilledItems.map((item) => ({
           key: item.id,
           color: item.color,
           percentage: item.percentage,
-          onPress: () => onDrill(null),
+          onPress: () => handleDrill(null),
         }));
 
   const legend: LegendEntry[] =
     drill === null
       ? [
-          { key: 'expense', label: 'Expense', percent: shares.expense, color: colors.expenseText, onPress: () => onDrill('expense') },
-          { key: 'income', label: 'Income', percent: shares.income, color: colors.incomeText, onPress: () => onDrill('income') },
+          { key: 'expense', label: 'Expense', percent: shares.expense, color: colors.expenseText, onPress: () => handleDrill('expense') },
+          { key: 'income', label: 'Income', percent: shares.income, color: colors.incomeText, onPress: () => handleDrill('income') },
         ]
       : drilledItems.map((item) => ({
           key: item.id,
@@ -110,7 +116,7 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
         <Pressable
           style={styles.centerHole}
           onPress={() =>
-            onDrill(drill === null ? 'expense' : drill === 'expense' ? 'income' : null)
+            handleDrill(drill === null ? 'expense' : drill === 'expense' ? 'income' : null)
           }
           accessibilityRole="button"
           accessibilityLabel={

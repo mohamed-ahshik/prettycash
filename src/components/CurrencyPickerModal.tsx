@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, radii } from '../theme';
+import { hapticSelection } from '../lib/haptics';
 import { Icon } from './Icon';
 
 interface CurrencyPickerModalProps {
@@ -32,6 +33,7 @@ export function CurrencyPickerModal({ visible, selected, onSelect, onClose }: Cu
                 key={cur.code}
                 style={[styles.row, isSelected && styles.selectedRow]}
                 onPress={() => {
+                  hapticSelection();
                   onSelect(cur.label);
                   onClose();
                 }}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTransactions } from '../context/TransactionsContext';
+import { hapticSuccess, hapticWarning } from '../lib/haptics';
 import { colors, fonts } from '../theme';
 import { Transaction } from '../types';
 import { toReceiptDraft } from '../utils/transactionDraft';
@@ -26,6 +27,7 @@ export function EditTransactionSheet({ transaction, onClose }: EditTransactionSh
   const handleSubmit = async (input: Omit<Transaction, 'id'>) => {
     try {
       await updateTransaction(transaction.id, input);
+      hapticSuccess();
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update transaction.');
@@ -34,6 +36,7 @@ export function EditTransactionSheet({ transaction, onClose }: EditTransactionSh
 
   const handleDelete = async () => {
     try {
+      hapticWarning();
       await deleteTransaction(transaction.id);
       onClose();
     } catch (e) {

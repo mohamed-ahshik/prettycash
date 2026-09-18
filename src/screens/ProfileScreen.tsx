@@ -8,6 +8,7 @@ import { RecurringModal } from '../components/RecurringModal';
 import { useAuth } from '../context/AuthContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
+import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
 import { colors, fonts, radii } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
 
@@ -33,6 +34,7 @@ export function ProfileScreen() {
       .then(([profileData, recurring]) => {
         if (cancelled) return;
         setProfile(profileData);
+        setHapticsEnabled(profileData?.hapticsEnabled ?? true);
         setRecurringItems(recurring);
         setError(null);
       })
@@ -51,6 +53,7 @@ export function ProfileScreen() {
 
   const updateProfile = (patch: Partial<UserProfile>) => {
     if (!profile) return;
+    if (patch.hapticsEnabled !== undefined) setHapticsEnabled(patch.hapticsEnabled);
     const next = { ...profile, ...patch };
     setProfile(next);
     upsertProfile(next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
@@ -157,7 +160,10 @@ export function ProfileScreen() {
             </View>
             <Switch
               value={profile.notificationsEnabled}
-              onValueChange={(val) => updateProfile({ notificationsEnabled: val })}
+              onValueChange={(val) => {
+                hapticSelection();
+                updateProfile({ notificationsEnabled: val });
+              }}
               trackColor={{ false: colors.border, true: colors.secondary }}
               thumbColor={profile.notificationsEnabled ? colors.primary : '#FFFFFF'}
             />
@@ -170,7 +176,10 @@ export function ProfileScreen() {
             </View>
             <Switch
               value={profile.hapticsEnabled}
-              onValueChange={(val) => updateProfile({ hapticsEnabled: val })}
+              onValueChange={(val) => {
+                updateProfile({ hapticsEnabled: val });
+                hapticSelection();
+              }}
               trackColor={{ false: colors.border, true: colors.secondary }}
               thumbColor={profile.hapticsEnabled ? colors.primary : '#FFFFFF'}
             />

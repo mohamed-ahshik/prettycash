@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, radii } from '../theme';
+import { hapticSelection } from '../lib/haptics';
 import { CategoryType } from '../types';
 
 interface SegmentedControlProps {
@@ -13,13 +14,19 @@ export function SegmentedControl({ selected, onSelect }: SegmentedControlProps) 
     <View style={styles.container}>
       <Pressable
         style={[styles.segment, selected === 'expense' && styles.activeSegment]}
-        onPress={() => onSelect('expense')}
+        onPress={() => {
+          hapticSelection();
+          onSelect('expense');
+        }}
       >
         <Text style={[styles.label, selected === 'expense' && styles.activeLabel]}>Expense</Text>
       </Pressable>
       <Pressable
         style={[styles.segment, selected === 'income' && styles.activeSegment]}
-        onPress={() => onSelect('income')}
+        onPress={() => {
+          hapticSelection();
+          onSelect('income');
+        }}
       >
         <Text style={[styles.label, selected === 'income' && styles.activeLabel]}>Income</Text>
       </Pressable>
