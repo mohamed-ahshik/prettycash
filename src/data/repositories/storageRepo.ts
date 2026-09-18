@@ -1,10 +1,10 @@
 import { supabase } from '../../lib/supabase';
 
-function base64ToBlob(base64: string, mimeType: string): Blob {
+export function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: mimeType });
+  return bytes.buffer as ArrayBuffer;
 }
 
 export async function uploadReceipt(base64: string, mimeType: string): Promise<string> {
@@ -12,7 +12,7 @@ export async function uploadReceipt(base64: string, mimeType: string): Promise<s
   const userId = userData.user?.id;
   if (!userId) throw new Error('not authenticated');
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${extFromMime(mimeType)}`;
-  const { error } = await supabase.storage.from('receipts').upload(path, base64ToBlob(base64, mimeType), { contentType: mimeType });
+  const { error } = await supabase.storage.from('receipts').upload(path, base64ToArrayBuffer(base64), { contentType: mimeType });
   if (error) throw error;
   return path;
 }

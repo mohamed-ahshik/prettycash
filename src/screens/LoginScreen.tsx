@@ -5,6 +5,8 @@ import { Icon } from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { colors, fonts, radii } from '../theme';
 
+const SHOW_GOOGLE_SIGN_IN = false;
+
 export function LoginScreen() {
   const { signInWithProvider } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -36,16 +38,18 @@ export function LoginScreen() {
         </View>
 
         <View style={styles.actions}>
-          <Pressable
-            style={({ pressed }) => [styles.button, styles.buttonPrimary, pressed && styles.pressed]}
-            onPress={() => handleSignIn('google')}
-            disabled={busy !== null}
-          >
-            <Icon name="google" size={20} color={colors.primaryForeground} />
-            <Text style={styles.buttonPrimaryText}>
-              {busy === 'google' ? 'Connecting…' : 'Continue with Google'}
-            </Text>
-          </Pressable>
+          {SHOW_GOOGLE_SIGN_IN ? (
+            <Pressable
+              style={({ pressed }) => [styles.button, styles.buttonPrimary, pressed && styles.pressed]}
+              onPress={() => handleSignIn('google')}
+              disabled={busy !== null}
+            >
+              <Icon name="google" size={20} color={colors.primaryForeground} />
+              <Text style={styles.buttonPrimaryText}>
+                {busy === 'google' ? 'Connecting…' : 'Continue with Google'}
+              </Text>
+            </Pressable>
+          ) : null}
 
           <Pressable
             style={({ pressed }) => [styles.button, styles.buttonSecondary, pressed && styles.pressed]}
