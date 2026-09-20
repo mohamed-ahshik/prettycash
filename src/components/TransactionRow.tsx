@@ -5,7 +5,7 @@ import { useCategories } from '../context/CategoriesContext';
 import { colors, fonts, text } from '../theme';
 import { useCurrency } from '../context/CurrencyContext';
 import { formatSignedAmount } from '../utils/format';
-import { Icon } from './Icon';
+import { CategoryAvatar } from './CategoryAvatar';
 
 interface TransactionRowProps {
   transaction: Transaction;
@@ -32,9 +32,7 @@ export function TransactionRow({ transaction, showDivider, onPress }: Transactio
       ]}
       onPress={onPress}
     >
-      <View style={[styles.iconCircle, { backgroundColor: bg }]}>
-        <Icon name={iconName} size={20} color={fg} />
-      </View>
+      <CategoryAvatar icon={iconName} colorBg={bg} colorFg={fg} />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{transaction.name}</Text>
         <Text style={styles.meta}>{transaction.time} • {category?.name ?? 'Other'}</Text>
@@ -60,13 +58,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
-  },
-  iconCircle: {
-    height: 40,
-    width: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   info: {
     flex: 1,

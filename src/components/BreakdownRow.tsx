@@ -11,7 +11,7 @@ import { useCurrency } from '../context/CurrencyContext';
 import { motion } from '../theme/motion';
 import { CategoryBreakdownItem } from '../types';
 import { formatCurrency } from '../utils/format';
-import { Icon } from './Icon';
+import { CategoryAvatar } from './CategoryAvatar';
 
 interface BreakdownRowProps {
   item: CategoryBreakdownItem;
@@ -35,9 +35,7 @@ export function BreakdownRow({ item }: BreakdownRowProps) {
   return (
     <View style={styles.container}>
       {/* Icon badge */}
-      <View style={[styles.iconCircle, { backgroundColor: item.bgColor }]}>
-        <Icon name={item.icon} size={20} color={item.color} />
-      </View>
+      <CategoryAvatar icon={item.icon} colorBg={item.bgColor} colorFg={item.color} size={38} />
 
       {/* Main details and progress bar */}
       <View style={styles.rightContent}>
@@ -66,13 +64,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   rightContent: {
     flex: 1,

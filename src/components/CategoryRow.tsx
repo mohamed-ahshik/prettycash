@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme';
 import { CategoryItem } from '../types';
+import { CategoryAvatar } from './CategoryAvatar';
 import { Icon } from './Icon';
 
 interface CategoryRowProps {
@@ -12,9 +13,7 @@ interface CategoryRowProps {
 export function CategoryRow({ item, isFirst = false }: CategoryRowProps) {
   return (
     <View style={[styles.row, !isFirst && styles.borderTop]}>
-      <View style={[styles.iconCircle, { backgroundColor: item.colorBg }]}>
-        <Icon name={item.icon} size={20} color={item.colorFg} />
-      </View>
+      <CategoryAvatar icon={item.icon} colorBg={item.colorBg} colorFg={item.colorFg} size={42} />
       <View style={styles.info}>
         <Text style={styles.name}>{item.name}</Text>
         {item.notes ? (
@@ -39,13 +38,6 @@ const styles = StyleSheet.create({
   borderTop: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  iconCircle: {
-    height: 42,
-    width: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   info: {
     flex: 1,
