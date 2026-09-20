@@ -1,27 +1,50 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  LayoutChangeEvent,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
+} from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, fonts, radii, shadows } from '../theme';
 import { motion } from '../theme/motion';
 import { hapticSelection } from '../lib/haptics';
 import { CategoryType } from '../types';
 
-interface SegmentedControlProps {
-  selected: CategoryType;
-  onSelect: (type: CategoryType) => void;
+export interface SegmentedControlOption<T extends string> {
+  value: T;
+  label: string;
 }
 
-export function SegmentedControl({ selected, onSelect }: SegmentedControlProps) {
+export const CATEGORY_TYPE_OPTIONS: SegmentedControlOption<CategoryType>[] = [
+  { value: 'expense', label: 'Expense' },
+  { value: 'income', label: 'Income' },
+];
+
+interface SegmentedControlProps<T extends string> {
+  selected: T;
+  onSelect: (value: T) => void;
+  options: SegmentedControlOption<T>[];
+  style?: StyleProp<ViewStyle>;
+}
+
+export function SegmentedControl<T extends string>({
+  selected,
+  onSelect,
+  options,
+  style,
+}: SegmentedControlProps<T>) {
   const [width, setWidth] = useState(0);
   const translateX = useSharedValue(0);
-  const thumbWidth = width > 0 ? (width - 8) / 2 : 0;
+  const thumbWidth = width > 0 ? (width - 8) / options.length : 0;
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === selected));
 
   useEffect(() => {
-    translateX.value = withSpring(
-      (selected === 'expense' ? 0 : 1) * thumbWidth,
-      motion.spring.thumb,
-    );
-  }, [selected, thumbWidth, translateX]);
+    translateX.value = withSpring(selectedIndex * thumbWidth, motion.spring.thumb);
+  }, [selectedIndex, thumbWidth, translateX]);
 
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -32,28 +55,24 @@ export function SegmentedControl({ selected, onSelect }: SegmentedControlProps) 
   };
 
   return (
-    <View style={styles.container} onLayout={handleLayout}>
+    <View style={[styles.container, style]} onLayout={handleLayout}>
       {thumbWidth > 0 ? (
         <Animated.View style={[styles.thumb, { width: thumbWidth }, thumbStyle]} />
       ) : null}
-      <Pressable
-        style={styles.segment}
-        onPress={() => {
-          hapticSelection();
-          onSelect('expense');
-        }}
-      >
-        <Text style={[styles.label, selected === 'expense' && styles.activeLabel]}>Expense</Text>
-      </Pressable>
-      <Pressable
-        style={styles.segment}
-        onPress={() => {
-          hapticSelection();
-          onSelect('income');
-        }}
-      >
-        <Text style={[styles.label, selected === 'income' && styles.activeLabel]}>Income</Text>
-      </Pressable>
+      {options.map((option) => (
+        <Pressable
+          key={option.value}
+          style={styles.segment}
+          onPress={() => {
+            hapticSelection();
+            onSelect(option.value);
+          }}
+        >
+          <Text style={[styles.label, selected === option.value && styles.activeLabel]}>
+            {option.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }

@@ -14,7 +14,7 @@ import { currentMonthKey } from '../utils/aggregate';
 import { formatMonthFromDate } from '../utils/format';
 import { AlertBanner } from './AlertBanner';
 import { Icon } from './Icon';
-import { SegmentedControl } from './SegmentedControl';
+import { CATEGORY_TYPE_OPTIONS, SegmentedControl } from './SegmentedControl';
 
 interface TransactionFormProps {
   initial?: Partial<ReceiptDraft>;
@@ -145,7 +145,7 @@ export function TransactionForm({
 
       {error ? <AlertBanner message={error} /> : null}
 
-      <SegmentedControl selected={type} onSelect={handleTypeSelect} />
+      <SegmentedControl selected={type} onSelect={handleTypeSelect} options={CATEGORY_TYPE_OPTIONS} />
 
       <ScrollView
         style={styles.formScroll}

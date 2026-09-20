@@ -5,17 +5,28 @@ import { AboutModal } from '../components/AboutModal';
 import { CurrencyPickerModal } from '../components/CurrencyPickerModal';
 import { Icon } from '../components/Icon';
 import { RecurringModal } from '../components/RecurringModal';
+import { SegmentedControl } from '../components/SegmentedControl';
+import type { SegmentedControlOption } from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme } from '../context/ThemeContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
 import { colors, fonts, radii, shadows, text } from '../theme';
+import type { ThemePreference } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
+
+const APPEARANCE_OPTIONS: SegmentedControlOption<ThemePreference>[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 export function ProfileScreen() {
   const { session } = useAuth();
   const { setCurrency } = useCurrency();
+  const { preference, setPreference } = useTheme();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
@@ -200,6 +211,25 @@ export function ProfileScreen() {
               thumbColor={profile.hapticsEnabled ? colors.primary : '#FFFFFF'}
             />
           </View>
+
+          <View style={[styles.settingItem, styles.borderTop]}>
+            <View style={styles.settingLeft}>
+              <Icon name="theme-light-dark" size={20} color={colors.primary} />
+              <Text style={styles.settingLabel}>Appearance</Text>
+            </View>
+            <View style={styles.appearanceControl}>
+              <SegmentedControl
+                selected={preference}
+                onSelect={(next) => {
+                  hapticSelection();
+                  setPreference(next);
+                  updateProfile({ themePreference: next });
+                }}
+                options={APPEARANCE_OPTIONS}
+                style={styles.appearanceSegment}
+              />
+            </View>
+          </View>
         </View>
 
         {/* About Section */}
@@ -380,6 +410,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.semibold,
     color: colors.mutedForeground,
+  },
+  appearanceControl: {
+    width: 176,
+  },
+  appearanceSegment: {
+    marginTop: 0,
+    marginBottom: 0,
+    padding: 3,
   },
   pressed: {
     opacity: 0.85,

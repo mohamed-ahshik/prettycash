@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AddCategoryModal } from '../components/AddCategoryModal';
 import { CategoryRow } from '../components/CategoryRow';
 import { Icon } from '../components/Icon';
-import { SegmentedControl } from '../components/SegmentedControl';
+import { CATEGORY_TYPE_OPTIONS, SegmentedControl } from '../components/SegmentedControl';
 import { useCategories } from '../context/CategoriesContext';
 import { colors, fonts, radii, shadows, text } from '../theme';
 import { CategoryType } from '../types';
@@ -30,7 +30,11 @@ export function CategoriesScreen() {
           </Pressable>
         </View>
 
-        <SegmentedControl selected={activeType} onSelect={setActiveType} />
+        <SegmentedControl
+          selected={activeType}
+          onSelect={setActiveType}
+          options={CATEGORY_TYPE_OPTIONS}
+        />
 
         <View style={styles.card}>
           {currentList.map((item, index) => (
