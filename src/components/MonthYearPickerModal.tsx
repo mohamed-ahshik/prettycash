@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, radii } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { MONTH_NAMES } from '../utils/format';
 import { Icon } from './Icon';
 
@@ -19,6 +21,8 @@ export function MonthYearPickerModal({
   onClose,
   onSelect,
 }: MonthYearPickerModalProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [year, setYear] = useState(selectedYear);
 
   useEffect(() => {
@@ -66,10 +70,10 @@ export function MonthYearPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,

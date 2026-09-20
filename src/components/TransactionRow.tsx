@@ -2,7 +2,9 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Transaction } from '../types';
 import { useCategories } from '../context/CategoriesContext';
-import { colors, fonts, text } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { useCurrency } from '../context/CurrencyContext';
 import { formatSignedAmount } from '../utils/format';
 import { CategoryAvatar } from './CategoryAvatar';
@@ -14,6 +16,8 @@ interface TransactionRowProps {
 }
 
 export function TransactionRow({ transaction, showDivider, onPress }: TransactionRowProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const { expenseCategories, incomeCategories } = useCategories();
   const { symbol, decimals } = useCurrency();
   const category = [...expenseCategories, ...incomeCategories].find((c) => c.id === transaction.categoryId);
@@ -44,7 +48,7 @@ export function TransactionRow({ transaction, showDivider, onPress }: Transactio
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

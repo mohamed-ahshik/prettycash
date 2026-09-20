@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CurrencyProvider, useCurrency } from './src/context/CurrencyContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { MonthProvider } from './src/context/MonthContext';
-import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { ThemeProvider, useTheme, useThemedStyles } from './src/context/ThemeContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
@@ -25,7 +25,8 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { colors, fonts, radii } from './src/theme';
+import { fonts, radii } from './src/theme';
+import type { ThemeColors } from './src/theme';
 
 const Tab = createBottomTabNavigator();
 
@@ -42,7 +43,7 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView style={rootStyles.root}>
       <ThemeProvider>
         <CurrencyProvider>
           <AuthProvider>
@@ -153,6 +154,8 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
 }
 
 function BootstrapError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.errorWrap}>
       <Text style={styles.errorTitle}>Something went wrong</Text>
@@ -165,6 +168,8 @@ function BootstrapError({ error, onRetry }: { error: string; onRetry: () => void
 }
 
 function AuthError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.errorWrap}>
       <Text style={styles.errorTitle}>Sign-in unavailable</Text>
@@ -177,6 +182,9 @@ function AuthError({ error, onRetry }: { error: string; onRetry: () => void }) {
 }
 
 function Splash() {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
+
   return (
     <Animated.View style={styles.splash} entering={FadeIn.duration(320)}>
       <View style={styles.splashLogo}>
@@ -188,6 +196,7 @@ function Splash() {
 }
 
 function AppNavigator() {
+  const styles = useThemedStyles(makeStyles);
   const { colors, isDark } = useTheme();
   const navigationTheme: Theme = useMemo(
     () => ({
@@ -234,10 +243,13 @@ function AppNavigator() {
   return content;
 }
 
-const styles = StyleSheet.create({
+const rootStyles = StyleSheet.create({
   root: {
     flex: 1,
   },
+});
+
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   splash: {
     flex: 1,
     alignItems: 'center',
@@ -288,7 +300,7 @@ const styles = StyleSheet.create({
   },
   webOuter: {
     flex: 1,
-    backgroundColor: '#EEF2F0',
+    backgroundColor: colors.canvas,
     alignItems: 'center',
     justifyContent: 'center',
   },

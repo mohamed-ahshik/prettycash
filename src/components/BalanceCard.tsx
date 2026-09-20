@@ -1,7 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Mask, Pattern, Rect, Stop } from 'react-native-svg';
-import { colors, radii, shadows, text } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { radii, shadows, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { useCurrency } from '../context/CurrencyContext';
 import { useBalanceVisibility } from '../hooks/useBalanceVisibility';
 import { BALANCE_MASK, EXPENSE_MASK, INCOME_MASK } from '../lib/balanceVisibility';
@@ -16,6 +18,8 @@ interface BalanceCardProps {
 }
 
 export function BalanceCard({ total, income, expense }: BalanceCardProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const { hidden, toggle } = useBalanceVisibility();
   const { symbol, decimals } = useCurrency();
 
@@ -113,7 +117,7 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   stack: {
     marginTop: 24,
   },
