@@ -9,7 +9,7 @@ Use these exact values when creating screenshots, marketing images, or illustrat
 
 - **Name:** PrettyCash · slug `prettycash`
 - **Vibe:** calm, trustworthy, premium — "forest green on warm paper"
-- **Theme:** light only (no dark mode implemented)
+- **Theme:** light and dark palettes; dark mode follows the system by default, with a user override in Profile → Appearance (see `docs/superpowers/specs/2026-09-20-dark-mode-design.md`)
 - **Primary accent:** deep forest green `#00674F`
 
 ---
