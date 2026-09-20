@@ -1,5 +1,5 @@
 import { CategoryBreakdownItem, CategoryItem, Transaction } from '../types';
-import { colors } from '../theme';
+import type { ThemeColors } from '../theme';
 import { categoryBreakdown } from './aggregate';
 
 export const MAX_DONUT_SLICES = 5;
@@ -31,6 +31,7 @@ export function getInsightsMonthData(
 
 export function capBreakdown(
   items: CategoryBreakdownItem[],
+  colors: Pick<ThemeColors, 'muted' | 'mutedForeground'>,
   max: number = MAX_DONUT_SLICES,
 ): CategoryBreakdownItem[] {
   if (items.length <= max) return items;

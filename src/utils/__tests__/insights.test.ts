@@ -1,4 +1,5 @@
 import { CategoryBreakdownItem, CategoryItem, Transaction } from '../../types';
+import { lightColors } from '../../theme';
 import { capBreakdown, getInsightsMonthData } from '../insights';
 
 const tx = (over: Partial<Transaction>): Transaction => ({
@@ -64,14 +65,14 @@ const item = (over: Partial<CategoryBreakdownItem>): CategoryBreakdownItem => ({
 describe('capBreakdown', () => {
   it('returns the items unchanged at or below the cap', () => {
     const items = [item({ id: 'a' }), item({ id: 'b' })];
-    expect(capBreakdown(items, 6)).toBe(items);
+    expect(capBreakdown(items, lightColors, 6)).toBe(items);
   });
 
   it('aggregates the remainder into a single Other item when above the cap', () => {
     const items = Array.from({ length: 8 }, (_, i) =>
       item({ id: `c${i}`, name: `C${i}`, amount: 8 - i, percentage: ((8 - i) / 36) * 100 }),
     );
-    const result = capBreakdown(items, 6);
+    const result = capBreakdown(items, lightColors, 6);
     expect(result).toHaveLength(7);
     expect(result[6].id).toBe('other');
     expect(result[6].name).toBe('Other');

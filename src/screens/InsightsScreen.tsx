@@ -8,11 +8,14 @@ import { MonthPicker } from '../components/MonthPicker';
 import { MonthYearPickerModal } from '../components/MonthYearPickerModal';
 import { useCategories } from '../context/CategoriesContext';
 import { useTransactions } from '../context/TransactionsContext';
-import { colors, text } from '../theme';
+import { useThemedStyles } from '../context/ThemeContext';
+import { text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { formatHeaderDate, MONTH_NAMES } from '../utils/format';
 import { getInsightsMonthData } from '../utils/insights';
 
 export function InsightsScreen() {
+  const styles = useThemedStyles(makeStyles);
   const { transactions } = useTransactions();
   const { expenseCategories, incomeCategories } = useCategories();
   const now = new Date();
@@ -83,7 +86,7 @@ export function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
