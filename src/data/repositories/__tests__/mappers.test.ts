@@ -32,5 +32,10 @@ it('maps recurring and profile rows', () => {
   expect(mapRecurringRow({ id: 'r1', name: 'Rent', type: 'expense', amount: 1200, category_name: 'Bills', icon: 'file-document-outline', color_bg: '#F3E8FF', color_fg: '#7C3AED', day_of_month: 1, active: true }))
     .toEqual({ id: 'r1', name: 'Rent', type: 'expense', amount: 1200, category: 'Bills', icon: 'file-document-outline', colorBg: '#F3E8FF', colorFg: '#7C3AED', dayOfMonth: 1, active: true });
   expect(mapProfileRow({ name: 'Maya', email: 'm@x.co', currency: 'USD ($)', notifications_enabled: true, haptics_enabled: false, member_since: 'Sep 2026' }))
-    .toEqual({ name: 'Maya', initial: 'M', email: 'm@x.co', currency: 'USD ($)', notificationsEnabled: true, hapticsEnabled: false, memberSince: 'Sep 2026' });
+    .toEqual({ name: 'Maya', initial: 'M', email: 'm@x.co', currency: 'USD ($)', notificationsEnabled: true, hapticsEnabled: false, themePreference: 'system', memberSince: 'Sep 2026' });
+});
+
+it('maps the stored theme preference with a system default', () => {
+  expect(mapProfileRow({ theme_preference: 'dark' }).themePreference).toBe('dark');
+  expect(mapProfileRow({ theme_preference: null }).themePreference).toBe('system');
 });

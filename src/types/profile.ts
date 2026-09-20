@@ -1,3 +1,5 @@
+import type { ThemePreference } from '../theme';
+
 export interface RecurringItem {
   id: string;
   name: string;
@@ -19,4 +21,5 @@ export interface UserProfile {
   currency: string;
   notificationsEnabled: boolean;
   hapticsEnabled: boolean;
+  themePreference: ThemePreference;
 }

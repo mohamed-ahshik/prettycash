@@ -124,6 +124,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
             currency: 'USD ($)',
             notificationsEnabled: true,
             hapticsEnabled: true,
+            themePreference: 'system',
           });
         }
         await seedDefaultCategoriesIfNeeded();

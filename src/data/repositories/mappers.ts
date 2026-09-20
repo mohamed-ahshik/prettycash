@@ -58,6 +58,7 @@ export function mapProfileRow(row: any): UserProfile {
     currency: row.currency ?? 'USD ($)',
     notificationsEnabled: row.notifications_enabled,
     hapticsEnabled: row.haptics_enabled,
+    themePreference: row.theme_preference ?? 'system',
     memberSince: row.member_since ?? '',
   };
 }
