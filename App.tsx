@@ -5,10 +5,13 @@ import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
 import { SHOW_AUTH_UI } from './src/config';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { CurrencyProvider, useCurrency } from './src/context/CurrencyContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { MonthProvider } from './src/context/MonthContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
@@ -16,6 +19,7 @@ import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
 import { setHapticsEnabled } from './src/lib/haptics';
 import { CategoriesScreen } from './src/screens/CategoriesScreen';
+import { Icon } from './src/components/Icon';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -37,9 +41,13 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <Gate />
-    </AuthProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <CurrencyProvider>
+        <AuthProvider>
+          <Gate />
+        </AuthProvider>
+      </CurrencyProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -86,6 +94,7 @@ function Gate() {
 
 function Bootstrap({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { setCurrency } = useCurrency();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -99,6 +108,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
       try {
         const existing = await getProfile();
         setHapticsEnabled(existing?.hapticsEnabled ?? true);
+        setCurrency(existing?.currency ?? 'USD ($)');
         if (!existing && user) {
           const meta = user.user_metadata ?? {};
           const name = (meta.full_name as string) || (meta.name as string) || user.email || 'You';
@@ -123,7 +133,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, attempt]);
+  }, [user, attempt, setCurrency]);
 
   if (error) {
     return <BootstrapError error={error} onRetry={() => setAttempt((a) => a + 1)} />;
@@ -162,9 +172,12 @@ function AuthError({ error, onRetry }: { error: string; onRetry: () => void }) {
 
 function Splash() {
   return (
-    <View style={styles.splash}>
-      <ActivityIndicator size="large" color={colors.primary} />
-    </View>
+    <Animated.View style={styles.splash} entering={FadeIn.duration(320)}>
+      <View style={styles.splashLogo}>
+        <Icon name="cash-multiple" size={36} color={colors.primary} />
+      </View>
+      <ActivityIndicator size="small" color={colors.mutedForeground} />
+    </Animated.View>
   );
 }
 
@@ -176,6 +189,7 @@ function AppNavigator() {
         tabBar={(props) => <TabBar {...props} />}
         screenOptions={{
           headerShown: false,
+          animation: 'fade',
         }}
       >
         <Tab.Screen name="Home" component={HomeScreen} />
@@ -198,11 +212,23 @@ function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   splash: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 20,
     backgroundColor: colors.background,
+  },
+  splashLogo: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   errorWrap: {
     flex: 1,

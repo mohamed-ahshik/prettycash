@@ -1,8 +1,11 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, radii } from '../theme';
+import { colors, fonts, radii, shadows } from '../theme';
+import { motion } from '../theme/motion';
+import { hapticSelection } from '../lib/haptics';
 import { AddTransactionSheet } from './AddTransactionSheet';
 import { Icon } from './Icon';
 
@@ -10,10 +13,43 @@ type TabName = 'Home' | 'Insights' | 'Categories' | 'Profile';
 
 const TAB_ICONS: Record<TabName, { active: string; inactive: string }> = {
   Home: { active: 'home', inactive: 'home-outline' },
-  Insights: { active: 'chart-pie', inactive: 'chart-pie' },
+  Insights: { active: 'chart-pie', inactive: 'chart-donut' },
   Categories: { active: 'shape', inactive: 'shape-outline' },
   Profile: { active: 'account', inactive: 'account-outline' },
 };
+
+interface TabItemProps {
+  label: string;
+  icon: string;
+  color: string;
+  isFocused: boolean;
+  onPress: () => void;
+}
+
+function TabItem({ label, icon, color, isFocused, onPress }: TabItemProps) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        scale.value = withSpring(0.92, motion.spring.press);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, motion.spring.press);
+      }}
+    >
+      <Animated.View style={[styles.item, animatedStyle]}>
+        <Icon name={icon} size={22} color={color} />
+        <Text style={[styles.label, { color, fontFamily: isFocused ? fonts.bold : fonts.medium }]}>
+          {label}
+        </Text>
+        {isFocused ? <View style={styles.dot} /> : null}
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -30,10 +66,14 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     const color = isFocused ? colors.primary : colors.mutedForeground;
 
     return (
-      <Pressable
+      <TabItem
         key={route.key}
-        style={styles.item}
+        label={label}
+        icon={isFocused ? icons.active : icons.inactive}
+        color={color}
+        isFocused={isFocused}
         onPress={() => {
+          hapticSelection();
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
@@ -43,17 +83,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             navigation.navigate(name);
           }
         }}
-      >
-        <Icon name={isFocused ? icons.active : icons.inactive} size={22} color={color} />
-        <Text
-          style={[
-            styles.label,
-            { color, fontFamily: isFocused ? fonts.bold : fonts.medium },
-          ]}
-        >
-          {label}
-        </Text>
-      </Pressable>
+      />
     );
   };
 
@@ -62,7 +92,10 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
       {renderTab('Home')}
       {renderTab('Insights')}
       <View style={styles.addWrap}>
-        <Pressable style={styles.addButton} onPress={() => setSheetVisible(true)}>
+        <Pressable
+          style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
+          onPress={() => setSheetVisible(true)}
+        >
           <Icon name="plus" size={28} color={colors.primaryForeground} />
         </Pressable>
       </View>
@@ -87,6 +120,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.e2,
   },
   item: {
     width: 56,
@@ -98,6 +132,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '500',
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
   },
   addWrap: {
     width: 56,
@@ -113,5 +153,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondaryForeground,
     borderWidth: 4,
     borderColor: colors.background,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

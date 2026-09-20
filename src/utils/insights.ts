@@ -2,7 +2,7 @@ import { CategoryBreakdownItem, CategoryItem, Transaction } from '../types';
 import { colors } from '../theme';
 import { categoryBreakdown } from './aggregate';
 
-export const MAX_DONUT_SLICES = 6;
+export const MAX_DONUT_SLICES = 5;
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;

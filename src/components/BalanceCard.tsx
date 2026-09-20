@@ -1,10 +1,12 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Mask, Pattern, Rect, Stop } from 'react-native-svg';
-import { colors, fonts, radii } from '../theme';
-import { formatCurrency, formatMoney } from '../utils/format';
+import { colors, radii, shadows, text } from '../theme';
+import { useCurrency } from '../context/CurrencyContext';
 import { useBalanceVisibility } from '../hooks/useBalanceVisibility';
 import { BALANCE_MASK, EXPENSE_MASK, INCOME_MASK } from '../lib/balanceVisibility';
+import { formatCurrency, formatSignedAmount } from '../utils/format';
+import { AnimatedNumber } from './AnimatedNumber';
 import { Icon } from './Icon';
 
 interface BalanceCardProps {
@@ -15,11 +17,10 @@ interface BalanceCardProps {
 
 export function BalanceCard({ total, income, expense }: BalanceCardProps) {
   const { hidden, toggle } = useBalanceVisibility();
+  const { symbol, decimals } = useCurrency();
 
   return (
     <View style={styles.stack}>
-      <View style={[styles.backdrop, styles.backdropOuter]} />
-      <View style={[styles.backdrop, styles.backdropInner]} />
       <View style={styles.card}>
         <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
           <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
@@ -41,7 +42,7 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
 
         <View style={styles.topRow}>
           <View style={styles.balanceLabelRow}>
-            <Text style={styles.balanceLabel}>Total balance</Text>
+            <Text style={[text.overline, styles.balanceLabel]}>Total balance</Text>
             <Pressable
               onPress={toggle}
               hitSlop={8}
@@ -55,7 +56,15 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
               />
             </Pressable>
           </View>
-          <Text style={styles.balanceValue}>{hidden ? BALANCE_MASK : formatCurrency(total)}</Text>
+          {hidden ? (
+            <Text style={[text.display, text.money, styles.balanceValue]}>{BALANCE_MASK}</Text>
+          ) : (
+            <AnimatedNumber
+              value={total}
+                  format={(v) => formatCurrency(v, symbol, decimals)}
+              style={[text.display, text.money, styles.balanceValue]}
+            />
+          )}
         </View>
 
         <View style={styles.split}>
@@ -64,8 +73,18 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
               <Icon name="arrow-down-left" size={18} color={colors.incomeText} />
             </View>
             <View>
-              <Text style={styles.splitLabel}>Income</Text>
-              <Text style={styles.splitValue}>{hidden ? INCOME_MASK : `+$${formatMoney(income)}`}</Text>
+              <Text style={[text.overline, styles.splitLabel]}>Income</Text>
+              {hidden ? (
+                <Text style={[text.bodyLg, text.money, styles.splitValue, styles.incomeValue]}>
+                  {INCOME_MASK}
+                </Text>
+              ) : (
+                <AnimatedNumber
+                  value={income}
+                  format={(v) => formatSignedAmount('income', v, symbol, decimals)}
+                  style={[text.bodyLg, text.money, styles.splitValue, styles.incomeValue]}
+                />
+              )}
             </View>
           </View>
           <View style={styles.divider} />
@@ -74,8 +93,18 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
               <Icon name="arrow-up-right" size={18} color={colors.expenseText} />
             </View>
             <View>
-              <Text style={styles.splitLabel}>Expense</Text>
-              <Text style={styles.splitValue}>{hidden ? EXPENSE_MASK : `$${formatMoney(expense)}`}</Text>
+              <Text style={[text.overline, styles.splitLabel]}>Expense</Text>
+              {hidden ? (
+                <Text style={[text.bodyLg, text.money, styles.splitValue, styles.expenseValue]}>
+                  {EXPENSE_MASK}
+                </Text>
+              ) : (
+                <AnimatedNumber
+                  value={expense}
+              format={(v) => formatCurrency(v, symbol, decimals)}
+                  style={[text.bodyLg, text.money, styles.splitValue, styles.expenseValue]}
+                />
+              )}
             </View>
           </View>
         </View>
@@ -88,23 +117,6 @@ const styles = StyleSheet.create({
   stack: {
     marginTop: 24,
   },
-  backdrop: {
-    position: 'absolute',
-    height: 96,
-    borderRadius: radii.lg,
-  },
-  backdropOuter: {
-    top: -8,
-    left: 12,
-    right: 12,
-    backgroundColor: '#DFF0EB',
-  },
-  backdropInner: {
-    top: -4,
-    left: 24,
-    right: 24,
-    backgroundColor: '#C9E7DE',
-  },
   card: {
     borderRadius: radii.lg,
     backgroundColor: colors.card,
@@ -112,6 +124,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 20,
     overflow: 'hidden',
+    ...shadows.e1,
   },
   topRow: {
     marginBottom: 16,
@@ -122,17 +135,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   balanceLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: fonts.medium,
     color: colors.mutedForeground,
   },
   balanceValue: {
     marginTop: 4,
-    fontSize: 32,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
-    letterSpacing: -0.5,
     color: colors.foreground,
   },
   split: {
@@ -140,7 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderRadius: radii.md,
-    padding: 12,
+    padding: 14,
     backgroundColor: colors.muted,
   },
   splitItem: {
@@ -150,24 +156,24 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   splitIcon: {
-    height: 36,
-    width: 36,
-    borderRadius: 18,
+    height: 40,
+    width: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
   },
   splitLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    fontFamily: fonts.medium,
     color: colors.mutedForeground,
   },
   splitValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
-    color: colors.foreground,
+    marginTop: 2,
+  },
+  incomeValue: {
+    color: colors.incomeText,
+  },
+  expenseValue: {
+    color: colors.expenseText,
   },
   divider: {
     width: 1,

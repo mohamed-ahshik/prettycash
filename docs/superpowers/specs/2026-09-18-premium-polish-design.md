@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-18
 **Status:** Approved for implementation
-**Implementation status:** Not started
+**Implementation status:** Phase 1 complete; Phase 2 complete (motion tokens, BottomSheet + all modals, ticker, list/donut/tab/segment/breakdown transitions, scanning state, splash). All uncommitted, pending on-device review.
 
 ---
 

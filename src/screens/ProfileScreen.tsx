@@ -6,14 +6,16 @@ import { CurrencyPickerModal } from '../components/CurrencyPickerModal';
 import { Icon } from '../components/Icon';
 import { RecurringModal } from '../components/RecurringModal';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
-import { colors, fonts, radii } from '../theme';
+import { colors, fonts, radii, shadows, text } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
 
 export function ProfileScreen() {
   const { session } = useAuth();
+  const { setCurrency } = useCurrency();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
@@ -35,6 +37,7 @@ export function ProfileScreen() {
         if (cancelled) return;
         setProfile(profileData);
         setHapticsEnabled(profileData?.hapticsEnabled ?? true);
+        setCurrency(profileData?.currency ?? 'USD ($)');
         setRecurringItems(recurring);
         setError(null);
       })
@@ -54,6 +57,7 @@ export function ProfileScreen() {
   const updateProfile = (patch: Partial<UserProfile>) => {
     if (!profile) return;
     if (patch.hapticsEnabled !== undefined) setHapticsEnabled(patch.hapticsEnabled);
+    if (patch.currency !== undefined) setCurrency(patch.currency);
     const next = { ...profile, ...patch };
     setProfile(next);
     upsertProfile(next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
@@ -122,7 +126,7 @@ export function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.screenTitle}>Profile</Text>
+        <Text style={[text.title, styles.screenTitle]}>Profile</Text>
 
         {/* Hero Card */}
         <View style={styles.heroCard}>
@@ -136,8 +140,11 @@ export function ProfileScreen() {
         </View>
 
         {/* Recurring Section */}
-        <Text style={styles.sectionHeading}>Schedule</Text>
-        <Pressable style={styles.menuRow} onPress={() => setRecurringVisible(true)}>
+        <Text style={[text.overline, styles.sectionHeading]}>Schedule</Text>
+        <Pressable
+          style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+          onPress={() => setRecurringVisible(true)}
+        >
           <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
             <Icon name="calendar-sync" size={20} color={colors.primary} />
           </View>
@@ -149,7 +156,7 @@ export function ProfileScreen() {
         </Pressable>
 
         {/* Settings Section */}
-        <Text style={styles.sectionHeading}>Settings</Text>
+        <Text style={[text.overline, styles.sectionHeading]}>Settings</Text>
         <View style={styles.settingsCard}>
           <Pressable style={styles.settingItem} onPress={() => setCurrencyVisible(true)}>
             <View style={styles.settingLeft}>
@@ -196,8 +203,11 @@ export function ProfileScreen() {
         </View>
 
         {/* About Section */}
-        <Text style={styles.sectionHeading}>General</Text>
-        <Pressable style={styles.menuRow} onPress={() => setAboutVisible(true)}>
+        <Text style={[text.overline, styles.sectionHeading]}>General</Text>
+        <Pressable
+          style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+          onPress={() => setAboutVisible(true)}
+        >
           <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
             <Icon name="information-outline" size={20} color={colors.foreground} />
           </View>
@@ -253,9 +263,6 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   screenTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
     color: colors.foreground,
     marginBottom: 16,
   },
@@ -296,12 +303,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sectionHeading: {
-    fontSize: 13,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
     color: colors.mutedForeground,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
     marginTop: 10,
     marginBottom: 8,
   },
@@ -309,12 +311,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    borderRadius: 18,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
     gap: 12,
     marginBottom: 16,
+    ...shadows.e1,
   },
   menuIconBox: {
     width: 40,
@@ -340,11 +343,12 @@ const styles = StyleSheet.create({
   },
   settingsCard: {
     backgroundColor: colors.card,
-    borderRadius: 18,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 16,
     marginBottom: 16,
+    ...shadows.e1,
   },
   settingItem: {
     flexDirection: 'row',
@@ -373,7 +377,11 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 13,
+    lineHeight: 18,
     fontFamily: fonts.semibold,
     color: colors.mutedForeground,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

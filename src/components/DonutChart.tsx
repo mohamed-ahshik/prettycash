@@ -1,11 +1,14 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { colors, fonts } from '../theme';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { colors, fonts, radii, shadows, text } from '../theme';
+import { motion } from '../theme/motion';
 import { combinedShares } from '../utils/aggregate';
 import { sectorPath, segmentAngles } from '../utils/donut';
 import { hapticSelection } from '../lib/haptics';
-import { formatMoney } from '../utils/format';
+import { formatCurrency } from '../utils/format';
+import { useCurrency } from '../context/CurrencyContext';
 import { capBreakdown, TypeBreakdown } from '../utils/insights';
 import { Icon } from './Icon';
 
@@ -32,8 +35,9 @@ interface LegendEntry {
 }
 
 export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps) {
-  const size = 140;
-  const strokeWidth = 16;
+  const { symbol, decimals } = useCurrency();
+  const size = 160;
+  const strokeWidth = 18;
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
   const inner = radius - strokeWidth / 2;
@@ -75,23 +79,31 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
           color: item.color,
         }));
 
-  const centerTitle = isEmpty && drill === null
-    ? 'No data'
-    : drill === null
-      ? 'Tap a segment'
-      : drill === 'expense'
-        ? 'Expenses'
-        : 'Income';
+  const centerTitle = drill === null
+    ? isEmpty
+      ? 'No data'
+      : 'Overview'
+    : drill === 'expense'
+      ? 'Expenses'
+      : 'Income';
+  const net = income.total - expense.total;
   const centerValue = drill === null
-    ? undefined
-    : formatMoney(drill === 'expense' ? expense.total : income.total);
+    ? isEmpty
+      ? undefined
+      : formatCurrency(net, symbol, decimals)
+    : formatCurrency(drill === 'expense' ? expense.total : income.total, symbol, decimals);
 
   const angles = segmentAngles(arcs.map((arc) => ({ key: arc.key, percentage: arc.percentage })));
+  const stacked = legend.length > 4;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, stacked && styles.cardStacked]}>
       <View style={styles.chartContainer}>
-        <Svg width={size} height={size}>
+        <Animated.View
+          key={drill ?? 'combined'}
+          entering={FadeIn.duration(motion.duration.selection)}
+        >
+          <Svg width={size} height={size}>
           {isEmpty ? (
             <Circle
               cx={center}
@@ -111,7 +123,8 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
               />
             ))
           )}
-        </Svg>
+          </Svg>
+        </Animated.View>
 
         <Pressable
           style={styles.centerHole}
@@ -124,12 +137,12 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
               ? 'Show expenses breakdown'
               : drill === 'expense'
                 ? 'Show income breakdown'
-                : 'Show combined chart'
+                : 'Show overview'
           }
         >
-          <Text style={styles.centerLabel}>{centerTitle}</Text>
+          <Text style={[text.overline, styles.centerLabel]}>{centerTitle}</Text>
           {centerValue ? (
-            <Text style={styles.centerAmount} numberOfLines={1}>{centerValue}</Text>
+            <Text style={[styles.centerAmount, text.money]} numberOfLines={1}>{centerValue}</Text>
           ) : null}
           <Icon
             name={drill === null ? 'gesture-tap' : 'autorenew'}
@@ -139,14 +152,14 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
         </Pressable>
       </View>
 
-      <View style={styles.legendContainer}>
+      <View style={[styles.legendContainer, stacked && styles.legendGrid]}>
         {isEmpty ? (
           <Text style={styles.emptyLegend}>No transactions this month</Text>
         ) : (
           legend.map((entry) => (
             <Pressable
               key={entry.key}
-              style={styles.legendRow}
+              style={[styles.legendRow, stacked && styles.legendGridItem]}
               onPress={entry.onPress}
               disabled={!entry.onPress}
             >
@@ -166,11 +179,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 18,
     gap: 16,
+    marginTop: 20,
+    ...shadows.e1,
   },
   chartContainer: {
     width: 140,
@@ -180,16 +195,14 @@ const styles = StyleSheet.create({
   },
   centerHole: {
     position: 'absolute',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 4,
   },
   centerLabel: {
-    fontSize: 11,
-    fontFamily: fonts.medium,
     color: colors.mutedForeground,
     textAlign: 'center',
   },
@@ -203,6 +216,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     gap: 10,
+  },
+  cardStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  legendGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 4,
+    marginTop: 16,
+  },
+  legendGridItem: {
+    width: '48%',
   },
   legendRow: {
     flexDirection: 'row',

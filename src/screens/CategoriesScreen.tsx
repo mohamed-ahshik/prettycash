@@ -6,7 +6,7 @@ import { CategoryRow } from '../components/CategoryRow';
 import { Icon } from '../components/Icon';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { useCategories } from '../context/CategoriesContext';
-import { colors, fonts, radii } from '../theme';
+import { colors, fonts, radii, shadows, text } from '../theme';
 import { CategoryType } from '../types';
 
 export function CategoriesScreen() {
@@ -20,8 +20,11 @@ export function CategoriesScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Categories</Text>
-          <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
+          <Text style={[text.title, styles.title]}>Categories</Text>
+          <Pressable
+            style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
+            onPress={() => setModalVisible(true)}
+          >
             <Icon name="plus" size={16} color={colors.primaryForeground} />
             <Text style={styles.addButtonText}>Add</Text>
           </Pressable>
@@ -64,9 +67,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
     color: colors.foreground,
   },
   addButton: {
@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     fontFamily: fonts.bold,
     color: colors.primaryForeground,
@@ -90,5 +91,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+    ...shadows.e1,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

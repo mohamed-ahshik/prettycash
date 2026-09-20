@@ -67,8 +67,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
+    lineHeight: 26,
     fontFamily: fonts.bold,
+    letterSpacing: -0.3,
     color: colors.foreground,
     marginBottom: 12,
   },

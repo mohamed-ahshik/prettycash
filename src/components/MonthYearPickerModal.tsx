@@ -96,7 +96,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
   },
   yearText: {
-    fontSize: 18,
+    fontSize: 20,
+    lineHeight: 26,
     fontWeight: '700',
     fontFamily: fonts.bold,
     color: colors.foreground,

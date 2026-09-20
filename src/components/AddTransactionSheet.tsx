@@ -1,22 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { hapticSuccess } from '../lib/haptics';
 import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
 import { colors, fonts, radii } from '../theme';
+import { motion } from '../theme/motion';
 import { ReceiptDraft, Transaction } from '../types';
 import { monthYearFromDate } from '../utils/aggregate';
+import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
 import { ReceiptImagePicker } from './ReceiptImagePicker';
 import { TransactionForm } from './TransactionForm';
@@ -37,6 +43,21 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   const [receiptPath, setReceiptPath] = useState<string | null>(null);
   const [receiptData, setReceiptData] = useState<unknown>(null);
   const requestToken = useRef(0);
+  const scan = useSharedValue(0);
+  const scanStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scan.value * 96 }],
+  }));
+
+  useEffect(() => {
+    if (flow === 'analyzing') {
+      scan.value = 0;
+      scan.value = withRepeat(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }),
+        -1,
+        true,
+      );
+    }
+  }, [flow, scan]);
 
   useEffect(() => {
     if (!visible) {
@@ -116,100 +137,82 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.backdrop}
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      maxHeight={flow === 'form' ? 0.92 : 0.8}
+      fill={flow === 'form'}
+    >
+      <Animated.View
+        key={flow}
+        style={flow === 'form' ? styles.stepFill : undefined}
+        entering={FadeIn.duration(motion.duration.selection)}
       >
-        <Pressable style={styles.dismissOverlay} onPress={onClose} />
-        <View style={[styles.modalCard, flow === 'form' && styles.formCard]}>
-          {flow === 'chooser' && (
-            <View style={styles.body}>
-              {renderHeader('Add Transaction', 'How would you like to add it?')}
-              <Pressable style={styles.optionButton} onPress={() => setFlow('capture')}>
-                <View style={styles.optionIcon}>
-                  <Icon name="camera" size={22} color={colors.primary} />
-                </View>
-                <View style={styles.optionTextWrap}>
-                  <Text style={styles.optionTitle}>Scan receipt</Text>
-                  <Text style={styles.optionSubtitle}>Use AI to fill in the details</Text>
-                </View>
-                <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
-              </Pressable>
-              <Pressable style={styles.optionButton} onPress={handleManual}>
-                <View style={styles.optionIcon}>
-                  <Icon name="pencil" size={22} color={colors.primary} />
-                </View>
-                <View style={styles.optionTextWrap}>
-                  <Text style={styles.optionTitle}>Enter manually</Text>
-                  <Text style={styles.optionSubtitle}>Type the details yourself</Text>
-                </View>
-                <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
-              </Pressable>
+      {flow === 'chooser' && (
+        <View style={styles.body}>
+          {renderHeader('Add Transaction', 'How would you like to add it?')}
+          <Pressable style={styles.optionButton} onPress={() => setFlow('capture')}>
+            <View style={styles.optionIcon}>
+              <Icon name="camera" size={22} color={colors.primary} />
             </View>
-          )}
-
-          {flow === 'capture' && (
-            <View style={styles.body}>
-              {renderHeader('Scan Receipt', 'Take a photo or choose from your library')}
-              <ReceiptImagePicker
-                onPicked={handlePicked}
-                onCancel={() => setFlow('chooser')}
-              />
+            <View style={styles.optionTextWrap}>
+              <Text style={styles.optionTitle}>Scan receipt</Text>
+              <Text style={styles.optionSubtitle}>Use AI to fill in the details</Text>
             </View>
-          )}
-
-          {flow === 'analyzing' && (
-            <View style={styles.analyzingWrap}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.analyzingText}>Reading receipt…</Text>
-              <Pressable style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
+            <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
+          </Pressable>
+          <Pressable style={styles.optionButton} onPress={handleManual}>
+            <View style={styles.optionIcon}>
+              <Icon name="pencil" size={22} color={colors.primary} />
             </View>
-          )}
-
-          {flow === 'form' && (
-            <View style={styles.formWrap}>
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-              <TransactionForm
-                initial={draft ?? undefined}
-                receiptDate={draft?.date}
-                onSubmit={handleSubmit}
-                onCancel={onClose}
-              />
+            <View style={styles.optionTextWrap}>
+              <Text style={styles.optionTitle}>Enter manually</Text>
+              <Text style={styles.optionSubtitle}>Type the details yourself</Text>
             </View>
-          )}
+            <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
+          </Pressable>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      )}
+
+      {flow === 'capture' && (
+        <View style={styles.body}>
+          {renderHeader('Scan Receipt', 'Take a photo or choose from your library')}
+          <ReceiptImagePicker
+            onPicked={handlePicked}
+            onCancel={() => setFlow('chooser')}
+          />
+        </View>
+      )}
+
+      {flow === 'analyzing' && (
+        <View style={styles.analyzingWrap}>
+          <View style={styles.scanBox}>
+            <Animated.View style={[styles.scanLine, scanStyle]} />
+          </View>
+          <Text style={styles.analyzingText}>Reading receipt…</Text>
+          <Pressable style={styles.cancelButton} onPress={onClose}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {flow === 'form' && (
+        <View style={styles.formWrap}>
+          <TransactionForm
+            initial={draft ?? undefined}
+            receiptDate={draft?.date}
+            error={error ?? undefined}
+            onSubmit={handleSubmit}
+            onCancel={onClose}
+          />
+        </View>
+      )}
+      </Animated.View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  dismissOverlay: {
-    ...StyleSheet.absoluteFill,
-  },
-  modalCard: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    maxHeight: '85%',
-    width: '100%',
-    maxWidth: 430,
-  },
-  formCard: {
-    height: '88%',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,6 +272,22 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontFamily: fonts.regular,
     marginTop: 2,
+  },
+  scanBox: {
+    width: '100%',
+    height: 120,
+    borderRadius: radii.md,
+    backgroundColor: colors.muted,
+    overflow: 'hidden',
+  },
+  scanLine: {
+    height: 2,
+    width: '100%',
+    backgroundColor: colors.primary,
+    opacity: 0.5,
+  },
+  stepFill: {
+    flex: 1,
   },
   analyzingWrap: {
     alignItems: 'center',

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { colors, fonts, radii } from '../theme';
+import { useCurrency } from '../context/CurrencyContext';
 import { RecurringItem } from '../types';
 import { hapticSelection, hapticWarning } from '../lib/haptics';
-import { formatMoney } from '../utils/format';
+import { formatSignedAmount } from '../utils/format';
 import { AddRecurringModal } from './AddRecurringModal';
+import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
 
 interface RecurringModalProps {
@@ -28,16 +30,14 @@ export function RecurringModal({
   const [activeOnly, setActiveOnly] = useState(true);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [addVisible, setAddVisible] = useState(false);
+  const { symbol, decimals } = useCurrency();
 
   const filteredItems = items.filter(
     (it) => it.type === filter && (!activeOnly || it.active),
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={styles.dismissOverlay} onPress={onClose} />
-        <View style={styles.sheetCard}>
+    <BottomSheet visible={visible} onClose={onClose} maxHeight={0.85}>
           <View style={styles.topBar}>
             <Text style={styles.sheetTitle}>Recurring</Text>
             <View style={styles.topBarActions}>
@@ -125,7 +125,7 @@ export function RecurringModal({
                           { color: item.type === 'income' ? colors.incomeText : colors.foreground },
                         ]}
                       >
-                        {item.type === 'income' ? '+' : '-'}${formatMoney(item.amount)}
+                        {formatSignedAmount(item.type, item.amount, symbol, decimals)}
                       </Text>
                       <Switch
                         value={item.active}
@@ -163,7 +163,6 @@ export function RecurringModal({
               ))
             )}
           </ScrollView>
-        </View>
 
         <AddRecurringModal
           visible={addVisible}
@@ -171,32 +170,11 @@ export function RecurringModal({
           onClose={() => setAddVisible(false)}
           onSave={onAddItem}
         />
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  dismissOverlay: {
-    ...StyleSheet.absoluteFill,
-  },
-  sheetCard: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 36,
-    maxHeight: '85%',
-    width: '100%',
-    maxWidth: 430,
-  },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -205,8 +183,10 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     fontSize: 20,
+    lineHeight: 26,
     fontWeight: '700',
     fontFamily: fonts.bold,
+    letterSpacing: -0.3,
     color: colors.foreground,
   },
   topBarActions: {

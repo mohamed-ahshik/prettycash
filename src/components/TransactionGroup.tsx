@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { Transaction, TransactionGroup as TransactionGroupType } from '../types';
-import { colors, fonts } from '../theme';
-import { formatSignedMoney } from '../utils/format';
+import { colors, text } from '../theme';
+import { motion } from '../theme/motion';
 import { TransactionRow } from './TransactionRow';
 
 interface TransactionGroupProps {
@@ -15,44 +16,32 @@ export function TransactionGroup({ group, onPressTransaction }: TransactionGroup
     return null;
   }
 
-  const totalColor = group.total >= 0 ? colors.incomeText : colors.foreground;
-
   return (
-    <View>
-      <View style={styles.header}>
-        <Text style={styles.label}>{group.label}</Text>
-        <Text style={[styles.total, { color: totalColor }]}>{formatSignedMoney(group.total)}</Text>
-      </View>
-      {group.transactions.map((transaction) => (
+    <Animated.View
+      entering={FadeInDown.duration(motion.duration.enter)}
+      layout={LinearTransition.duration(motion.duration.selection)}
+    >
+      <Animated.View style={styles.header}>
+        <Text style={[text.overline, styles.label]}>{group.label}</Text>
+      </Animated.View>
+      {group.transactions.map((transaction, index) => (
         <TransactionRow
           key={transaction.id}
           transaction={transaction}
+          showDivider={index > 0}
           onPress={() => onPressTransaction?.(transaction)}
         />
       ))}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 20,
+    paddingBottom: 6,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
     color: colors.foreground,
-  },
-  total: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
   },
 });

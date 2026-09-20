@@ -94,10 +94,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     fontFamily: fonts.bold,
     color: colors.foreground,
-    letterSpacing: -0.3,
+    letterSpacing: -0.6,
   },
   subtitle: {
     fontSize: 14,
@@ -126,18 +127,21 @@ const styles = StyleSheet.create({
   },
   buttonPrimaryText: {
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: '600',
     fontFamily: fonts.semibold,
     color: colors.primaryForeground,
   },
   buttonSecondaryText: {
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: '600',
     fontFamily: fonts.semibold,
     color: colors.secondaryForeground,
   },
   error: {
     fontSize: 13,
+    lineHeight: 18,
     fontFamily: fonts.regular,
     color: colors.expenseText,
     textAlign: 'center',

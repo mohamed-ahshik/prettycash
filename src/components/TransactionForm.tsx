@@ -12,6 +12,7 @@ import { colors, fonts, radii } from '../theme';
 import { LineItem, ReceiptDraft, Transaction, TransactionType } from '../types';
 import { currentMonthKey } from '../utils/aggregate';
 import { formatMonthFromDate } from '../utils/format';
+import { AlertBanner } from './AlertBanner';
 import { Icon } from './Icon';
 import { SegmentedControl } from './SegmentedControl';
 
@@ -23,6 +24,7 @@ interface TransactionFormProps {
   title?: string;
   submitLabel?: string;
   receiptDate?: string;
+  error?: string;
   onDelete?: () => void;
   onSubmit: (input: Omit<Transaction, 'id'>) => void;
   onCancel: () => void;
@@ -66,6 +68,7 @@ export function TransactionForm({
   title = 'Add Transaction',
   submitLabel = 'Save',
   receiptDate,
+  error,
   onDelete,
   onSubmit,
   onCancel,
@@ -140,6 +143,8 @@ export function TransactionForm({
         </Pressable>
       </View>
 
+      {error ? <AlertBanner message={error} /> : null}
+
       <SegmentedControl selected={type} onSelect={handleTypeSelect} />
 
       <ScrollView
@@ -211,7 +216,11 @@ export function TransactionForm({
             return (
               <Pressable
                 key={c.id}
-                style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                style={({ pressed }) => [
+                  styles.categoryChip,
+                  isSelected && styles.categoryChipSelected,
+                  pressed && styles.pressed,
+                ]}
                 onPress={() => setCategoryId(c.id)}
               >
                 <View style={[styles.categoryIcon, { backgroundColor: c.colorBg }]}>
@@ -301,7 +310,11 @@ export function TransactionForm({
       ) : null}
 
       <Pressable
-        style={[styles.saveButton, !valid && styles.saveButtonDisabled]}
+        style={({ pressed }) => [
+          styles.saveButton,
+          !valid && styles.saveButtonDisabled,
+          pressed && styles.pressed,
+        ]}
         disabled={!valid}
         onPress={handleSubmit}
       >
@@ -323,8 +336,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
+    lineHeight: 26,
     fontWeight: '700',
     fontFamily: fonts.bold,
+    letterSpacing: -0.3,
     color: colors.foreground,
   },
   closeButton: {
@@ -337,6 +352,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
     fontFamily: fonts.semibold,
     color: colors.foreground,
@@ -351,6 +367,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
+    lineHeight: 20,
     color: colors.foreground,
     fontFamily: fonts.regular,
   },
@@ -530,8 +547,12 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: '700',
     fontFamily: fonts.bold,
     color: colors.primaryForeground,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

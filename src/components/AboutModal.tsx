@@ -62,8 +62,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
+    lineHeight: 26,
     fontFamily: fonts.bold,
+    letterSpacing: -0.3,
     color: colors.foreground,
   },
   closeBtn: {

@@ -1,8 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts } from '../theme';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { colors, fonts, text } from '../theme';
+import { useCurrency } from '../context/CurrencyContext';
+import { motion } from '../theme/motion';
 import { CategoryBreakdownItem } from '../types';
-import { formatMoney } from '../utils/format';
+import { formatCurrency } from '../utils/format';
 import { Icon } from './Icon';
 
 interface BreakdownRowProps {
@@ -10,6 +18,20 @@ interface BreakdownRowProps {
 }
 
 export function BreakdownRow({ item }: BreakdownRowProps) {
+  const { symbol, decimals } = useCurrency();
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(Math.min(item.percentage, 100) / 100, {
+      duration: motion.duration.sweep,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [item.percentage, progress]);
+
+  const barStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: progress.value }],
+  }));
+
   return (
     <View style={styles.container}>
       {/* Icon badge */}
@@ -24,16 +46,13 @@ export function BreakdownRow({ item }: BreakdownRowProps) {
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.percentage}>{item.percentage.toFixed(1)}%</Text>
           </View>
-          <Text style={styles.amount}>{formatMoney(item.amount)}</Text>
+          <Text style={[styles.amount, text.money]}>{formatCurrency(item.amount, symbol, decimals)}</Text>
         </View>
 
         {/* Proportion bar */}
         <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressBar,
-              { width: `${Math.min(item.percentage, 100)}%`, backgroundColor: item.color },
-            ]}
+          <Animated.View
+            style={[styles.progressBar, { backgroundColor: item.color }, barStyle]}
           />
         </View>
       </View>
@@ -92,6 +111,8 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
+    width: '100%',
     borderRadius: 2,
+    transformOrigin: 'left',
   },
 });

@@ -10,7 +10,7 @@ interface MonthPickerProps {
 
 export function MonthPicker({ month, onPress }: MonthPickerProps) {
   return (
-    <Pressable style={styles.pill} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.pill, pressed && styles.pressed]} onPress={onPress}>
       <Icon name="calendar" size={18} color={colors.primary} />
       <Text style={styles.label}>{month}</Text>
       <Icon name="chevron-down" size={18} color={colors.primary} />
@@ -38,5 +38,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fonts.bold,
     color: colors.foreground,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

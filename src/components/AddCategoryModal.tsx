@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +10,7 @@ import {
 import { PRESET_CATEGORY_COLORS, PRESET_CATEGORY_ICONS } from '../data/categoriesData';
 import { colors, fonts, radii } from '../theme';
 import { CategoryItem, CategoryType } from '../types';
+import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
 
 interface AddCategoryModalProps {
@@ -44,13 +42,7 @@ export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategory
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.backdrop}
-      >
-        <Pressable style={styles.dismissOverlay} onPress={onClose} />
-        <View style={styles.modalCard}>
+    <BottomSheet visible={visible} onClose={onClose} maxHeight={0.85}>
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Add Category</Text>
@@ -137,33 +129,11 @@ export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategory
           >
             <Text style={styles.saveButtonText}>Save Category</Text>
           </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  dismissOverlay: {
-    ...StyleSheet.absoluteFill,
-  },
-  modalCard: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    maxHeight: '85%',
-    width: '100%',
-    maxWidth: 430,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -172,12 +142,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
+    lineHeight: 26,
     fontWeight: '700',
     fontFamily: fonts.bold,
+    letterSpacing: -0.3,
     color: colors.foreground,
   },
   subtitle: {
     fontSize: 12,
+    lineHeight: 16,
     color: colors.mutedForeground,
     fontFamily: fonts.medium,
     marginTop: 2,
