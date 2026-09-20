@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CurrencyProvider, useCurrency } from './src/context/CurrencyContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { MonthProvider } from './src/context/MonthContext';
+import { ThemeProvider } from './src/context/ThemeContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
@@ -42,11 +43,13 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <CurrencyProvider>
-        <AuthProvider>
-          <Gate />
-        </AuthProvider>
-      </CurrencyProvider>
+      <ThemeProvider>
+        <CurrencyProvider>
+          <AuthProvider>
+            <Gate />
+          </AuthProvider>
+        </CurrencyProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }
