@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CurrencyProvider, useCurrency } from './src/context/CurrencyContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { MonthProvider } from './src/context/MonthContext';
-import { ThemeProvider } from './src/context/ThemeContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
@@ -98,6 +98,7 @@ function Gate() {
 function Bootstrap({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { setCurrency } = useCurrency();
+  const { setPreference } = useTheme();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -112,6 +113,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
         const existing = await getProfile();
         setHapticsEnabled(existing?.hapticsEnabled ?? true);
         setCurrency(existing?.currency ?? 'USD ($)');
+        setPreference(existing?.themePreference ?? 'system');
         if (!existing && user) {
           const meta = user.user_metadata ?? {};
           const name = (meta.full_name as string) || (meta.name as string) || user.email || 'You';
@@ -137,7 +139,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, attempt, setCurrency]);
+  }, [user, attempt, setCurrency, setPreference]);
 
   if (error) {
     return <BootstrapError error={error} onRetry={() => setAttempt((a) => a + 1)} />;
