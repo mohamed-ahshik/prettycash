@@ -136,7 +136,7 @@ function Row() {
 - `src/theme/colors.ts` continues to export `colors` (light values) but **no UI module may import it**; it remains only for stored-data concerns and tests (`seed.ts`, `categoriesData.ts`, `mappers.ts` fallbacks, unit tests). Migration is complete when the audit grep (§8) returns no UI hits.
 - Pure/non-React consumers:
   - `src/utils/insights.ts` — palette-dependent tokens become a parameter (`mutedForeground`, `muted` for the "Other" slice).
-  - `src/utils/aggregate.ts` — neutral fallbacks (`#6B7280`/`#F3F4F6`) resolved from the active palette by the caller.
+  - `src/utils/aggregate.ts` — unchanged; its neutral light fallbacks (`#6B7280`/`#F3F4F6`) flow through the same render-time derivation as stored category colors.
 
 ### 4.3 App shell
 
@@ -192,7 +192,7 @@ alter table public.profiles
 10. Convert `App.tsx` (Splash/Error/AuthError/web frame) to themed styles.
 11. Convert 5 screens: Home, Insights, Categories, Login, Profile.
 12. Convert 22 themed components: AboutModal, AddCategoryModal, AddRecurringModal, AddTransactionSheet, AlertBanner, BalanceCard, BottomSheet, BreakdownCard, BreakdownRow, CategoryRow, CurrencyPickerModal, DonutChart, EmptyState, MonthPicker, MonthYearPickerModal, ReceiptImagePicker, RecurringModal, SegmentedControl, TabBar, TransactionForm, TransactionGroup, TransactionRow.
-13. Route category tints through `CategoryAvatar`/derivation (incl. `AddRecurringModal` hardcoded quick-chip palette → `PRESET_CATEGORY_COLORS` + derivation); parameterize `insights.ts`/`aggregate.ts`.
+13. Route category tints through `CategoryAvatar`/derivation (incl. `AddRecurringModal` hardcoded quick-chip palette → `PRESET_CATEGORY_COLORS` + derivation); parameterize `insights.ts` (aggregate fallbacks derive at render).
 14. Cleanups while in-file: 3 hardcoded backdrops `rgba(0,0,0,0.4)` (`MonthYearPickerModal`, `CurrencyPickerModal`, `AboutModal`) → `colors.overlay`; `BalanceCard` mask `#000` stops unchanged (intentional); white Switch thumbs unchanged (platform-consistent).
 15. Docs: update `design/brand.md` ("light only" → light + dark).
 
