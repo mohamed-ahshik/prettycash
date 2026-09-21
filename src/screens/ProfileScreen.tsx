@@ -9,12 +9,12 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import type { SegmentedControlOption } from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
-import { colors, fonts, radii, shadows, text } from '../theme';
-import type { ThemePreference } from '../theme';
+import { fonts, radii, shadows, text } from '../theme';
+import type { ThemeColors, ThemePreference } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
 
 const APPEARANCE_OPTIONS: SegmentedControlOption<ThemePreference>[] = [
@@ -24,9 +24,10 @@ const APPEARANCE_OPTIONS: SegmentedControlOption<ThemePreference>[] = [
 ];
 
 export function ProfileScreen() {
+  const styles = useThemedStyles(makeStyles);
   const { session } = useAuth();
   const { setCurrency } = useCurrency();
-  const { preference, setPreference } = useTheme();
+  const { preference, setPreference, colors } = useTheme();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
@@ -270,7 +271,7 @@ export function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

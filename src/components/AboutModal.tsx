@@ -1,6 +1,8 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, radii } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { Icon } from './Icon';
 
 interface AboutModalProps {
@@ -9,6 +11,8 @@ interface AboutModalProps {
 }
 
 export function AboutModal({ visible, onClose }: AboutModalProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
@@ -38,10 +42,10 @@ export function AboutModal({ visible, onClose }: AboutModalProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,

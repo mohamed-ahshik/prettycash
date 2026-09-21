@@ -7,7 +7,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { colors, fonts, radii } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { PRESET_CATEGORY_COLORS } from '../data/categoriesData';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { RecurringItem } from '../types';
 import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
@@ -20,14 +23,16 @@ interface AddRecurringModalProps {
 }
 
 const CATEGORY_OPTIONS = [
-  { name: 'Bills', icon: 'file-document-outline', bg: '#F3E8FF', fg: '#7C3AED' },
-  { name: 'Food', icon: 'cart-outline', bg: '#DFF0EB', fg: '#00674F' },
-  { name: 'Fun', icon: 'play', bg: '#FFEEE3', fg: '#E67E22' },
-  { name: 'Travel', icon: 'car-outline', bg: '#E8EFFD', fg: '#3B5BDB' },
-  { name: 'Income', icon: 'briefcase-outline', bg: '#E8F5E9', fg: '#2E7D32' },
+  { name: 'Bills', icon: 'file-document-outline', ...PRESET_CATEGORY_COLORS[5] },
+  { name: 'Food', icon: 'cart-outline', ...PRESET_CATEGORY_COLORS[0] },
+  { name: 'Fun', icon: 'play', ...PRESET_CATEGORY_COLORS[2] },
+  { name: 'Travel', icon: 'car-outline', ...PRESET_CATEGORY_COLORS[1] },
+  { name: 'Income', icon: 'briefcase-outline', ...PRESET_CATEGORY_COLORS[4] },
 ];
 
 export function AddRecurringModal({ visible, initialType, onClose, onSave }: AddRecurringModalProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [name, setName] = useState('');
   const [type, setType] = useState<'expense' | 'income'>(initialType ?? 'expense');
   const [amount, setAmount] = useState('');
@@ -153,7 +158,7 @@ export function AddRecurringModal({ visible, initialType, onClose, onSave }: Add
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
