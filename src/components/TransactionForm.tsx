@@ -8,11 +8,14 @@ import {
   View,
 } from 'react-native';
 import { useCategories } from '../context/CategoriesContext';
-import { colors, fonts, radii } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { LineItem, ReceiptDraft, Transaction, TransactionType } from '../types';
 import { currentMonthKey } from '../utils/aggregate';
 import { formatMonthFromDate } from '../utils/format';
 import { AlertBanner } from './AlertBanner';
+import { CategoryAvatar } from './CategoryAvatar';
 import { Icon } from './Icon';
 import { CATEGORY_TYPE_OPTIONS, SegmentedControl } from './SegmentedControl';
 
@@ -73,6 +76,8 @@ export function TransactionForm({
   onSubmit,
   onCancel,
 }: TransactionFormProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const { expenseCategories, incomeCategories } = useCategories();
 
   const initialItems: LineItem[] = (initial?.items ?? []).map((it) => ({
@@ -223,9 +228,13 @@ export function TransactionForm({
                 ]}
                 onPress={() => setCategoryId(c.id)}
               >
-                <View style={[styles.categoryIcon, { backgroundColor: c.colorBg }]}>
-                  <Icon name={c.icon} size={16} color={c.colorFg} />
-                </View>
+                <CategoryAvatar
+                  icon={c.icon}
+                  colorBg={c.colorBg}
+                  colorFg={c.colorFg}
+                  size={28}
+                  iconSize={16}
+                />
                 <Text
                   style={[
                     styles.categoryChipLabel,
@@ -324,7 +333,7 @@ export function TransactionForm({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -425,13 +434,6 @@ const styles = StyleSheet.create({
   categoryChipSelected: {
     borderColor: colors.primary,
     backgroundColor: colors.secondary,
-  },
-  categoryIcon: {
-    height: 28,
-    width: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   categoryChipLabel: {
     fontSize: 13,

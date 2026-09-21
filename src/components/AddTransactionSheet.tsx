@@ -14,11 +14,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useMonth } from '../context/MonthContext';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { hapticSuccess } from '../lib/haptics';
 import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
-import { colors, fonts, radii } from '../theme';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { ReceiptDraft, Transaction } from '../types';
 import { monthYearFromDate } from '../utils/aggregate';
@@ -35,6 +37,8 @@ interface AddTransactionSheetProps {
 type Flow = 'chooser' | 'capture' | 'analyzing' | 'form';
 
 export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const { addTransaction } = useTransactions();
   const { setMonth } = useMonth();
   const [flow, setFlow] = useState<Flow>('chooser');
@@ -212,7 +216,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

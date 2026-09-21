@@ -1,7 +1,9 @@
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, radii } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { Icon } from './Icon';
 
 interface ReceiptImagePickerProps {
@@ -27,6 +29,8 @@ export async function getImageBase64(
 }
 
 export function ReceiptImagePicker({ onPicked, onCancel }: ReceiptImagePickerProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +95,7 @@ export function ReceiptImagePicker({ onPicked, onCancel }: ReceiptImagePickerPro
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     gap: 12,
   },

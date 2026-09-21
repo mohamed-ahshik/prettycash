@@ -9,7 +9,9 @@ import {
   ViewStyle,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { colors, fonts, radii, shadows } from '../theme';
+import { useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii, shadows } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { hapticSelection } from '../lib/haptics';
 import { CategoryType } from '../types';
@@ -37,6 +39,7 @@ export function SegmentedControl<T extends string>({
   options,
   style,
 }: SegmentedControlProps<T>) {
+  const styles = useThemedStyles(makeStyles);
   const [width, setWidth] = useState(0);
   const translateX = useSharedValue(0);
   const thumbWidth = width > 0 ? (width - 8) / options.length : 0;
@@ -77,7 +80,7 @@ export function SegmentedControl<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: colors.muted,
