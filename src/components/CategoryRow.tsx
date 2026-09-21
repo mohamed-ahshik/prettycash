@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts } from '../theme';
+import type { ThemeColors } from '../theme';
 import { CategoryItem } from '../types';
 import { CategoryAvatar } from './CategoryAvatar';
 import { Icon } from './Icon';
@@ -11,6 +13,8 @@ interface CategoryRowProps {
 }
 
 export function CategoryRow({ item, isFirst = false }: CategoryRowProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   return (
     <View style={[styles.row, !isFirst && styles.borderTop]}>
       <CategoryAvatar icon={item.icon} colorBg={item.colorBg} colorFg={item.colorFg} size={42} />
@@ -27,7 +31,7 @@ export function CategoryRow({ item, isFirst = false }: CategoryRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

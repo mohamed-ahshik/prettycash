@@ -7,8 +7,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { PRESET_CATEGORY_COLORS, PRESET_CATEGORY_ICONS } from '../data/categoriesData';
-import { colors, fonts, radii } from '../theme';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { CategoryItem, CategoryType } from '../types';
 import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
@@ -21,6 +23,8 @@ interface AddCategoryModalProps {
 }
 
 export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategoryModalProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(PRESET_CATEGORY_ICONS[0]);
@@ -133,7 +137,7 @@ export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategory
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

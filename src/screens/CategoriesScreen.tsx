@@ -6,10 +6,14 @@ import { CategoryRow } from '../components/CategoryRow';
 import { Icon } from '../components/Icon';
 import { CATEGORY_TYPE_OPTIONS, SegmentedControl } from '../components/SegmentedControl';
 import { useCategories } from '../context/CategoriesContext';
-import { colors, fonts, radii, shadows, text } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii, shadows, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { CategoryType } from '../types';
 
 export function CategoriesScreen() {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [activeType, setActiveType] = useState<CategoryType>('expense');
   const { expenseCategories, incomeCategories, addCategory } = useCategories();
   const [modalVisible, setModalVisible] = useState(false);
@@ -55,7 +59,7 @@ export function CategoriesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
