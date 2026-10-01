@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-20
 **Status:** Approved for implementation
-**Implementation status:** Implemented — passed two senior reviews (visual + architecture); all P0/P1 fixed and re-reviewed (fix commit `3c08875`). Outstanding human steps: apply `20260920000000_add_theme_preference.sql` to the live Supabase project (required before new-account signup) and run the on-device checklist. Deferred P2s: Appearance swatches preview stored pastels, dark Switch on-track low contrast, avatar boundary for dark presets, no derived-tint contrast test, no SegmentedControl regression test, dark-tinted shadows (spec out of scope).
+**Implementation status:** Implemented — passed two senior reviews (visual + architecture) and a final whole-branch review; all P0/P1 fixed and re-reviewed (fix commits `3c08875`, `682ad48`). Outstanding human steps: apply `20260920000000_add_theme_preference.sql` to the live Supabase project (pre-migration upserts fail, blocking new-account signup and settings saves) and run the on-device checklist. Deferred P2s: Appearance swatches preview stored pastels, dark Switch on-track low contrast, avatar boundary for dark presets, no derived-tint contrast test, no SegmentedControl regression test, dark-tinted shadows (spec out of scope), optimistic rapid-tap persist race.
 
 ---
 
