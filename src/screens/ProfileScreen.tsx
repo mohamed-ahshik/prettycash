@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AboutModal } from '../components/AboutModal';
+import { AlertBanner } from '../components/AlertBanner';
 import { CurrencyPickerModal } from '../components/CurrencyPickerModal';
 import { Icon } from '../components/Icon';
 import { RecurringModal } from '../components/RecurringModal';
@@ -16,6 +17,7 @@ import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
 import { fonts, radii, shadows, text } from '../theme';
 import type { ThemeColors, ThemePreference } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
+import { getErrorMessage } from '../utils/errorMessage';
 
 const APPEARANCE_OPTIONS: SegmentedControlOption<ThemePreference>[] = [
   { value: 'system', label: 'System' },
@@ -55,7 +57,7 @@ export function ProfileScreen() {
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(getErrorMessage(e));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -72,7 +74,9 @@ export function ProfileScreen() {
     if (patch.currency !== undefined) setCurrency(patch.currency);
     const next = { ...profile, ...patch };
     setProfile(next);
-    upsertProfile(next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    upsertProfile(next)
+      .then(() => setError(null))
+      .catch((e) => setError(getErrorMessage(e)));
   };
 
   const handleToggleRecurring = (id: string) => {
@@ -82,7 +86,7 @@ export function ProfileScreen() {
     setRecurringItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, active: next } : it))
     );
-    setRecurringActive(id, next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    setRecurringActive(id, next).catch((e) => setError(getErrorMessage(e)));
   };
 
   const handleAddRecurring = async (newItem: Omit<RecurringItem, 'id' | 'active'>) => {
@@ -90,7 +94,7 @@ export function ProfileScreen() {
       const created = await insertRecurring(newItem);
       setRecurringItems((prev) => [created, ...prev]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(getErrorMessage(e));
     }
   };
 
@@ -99,7 +103,7 @@ export function ProfileScreen() {
       await deleteRecurring(id);
       setRecurringItems((prev) => prev.filter((it) => it.id !== id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(getErrorMessage(e));
     }
   };
 
@@ -138,6 +142,8 @@ export function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {error ? <AlertBanner message={error} /> : null}
+
         <Text style={[text.title, styles.screenTitle]}>Profile</Text>
 
         {/* Hero Card */}
@@ -222,7 +228,6 @@ export function ProfileScreen() {
               <SegmentedControl
                 selected={preference}
                 onSelect={(next) => {
-                  hapticSelection();
                   setPreference(next);
                   updateProfile({ themePreference: next });
                 }}

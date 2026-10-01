@@ -38,4 +38,5 @@ it('maps recurring and profile rows', () => {
 it('maps the stored theme preference with a system default', () => {
   expect(mapProfileRow({ theme_preference: 'dark' }).themePreference).toBe('dark');
   expect(mapProfileRow({ theme_preference: null }).themePreference).toBe('system');
+  expect(mapProfileRow({ theme_preference: 'neon' }).themePreference).toBe('system');
 });

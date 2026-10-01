@@ -27,6 +27,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { fonts, radii } from './src/theme';
 import type { ThemeColors } from './src/theme';
+import { getErrorMessage } from './src/utils/errorMessage';
 
 const Tab = createBottomTabNavigator();
 
@@ -133,7 +134,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
         await seedDefaultCategoriesIfNeeded();
         if (!cancelled) setReady(true);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setError(getErrorMessage(e));
       }
     })();
 
