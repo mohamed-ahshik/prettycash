@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-20
 **Status:** Approved for implementation
-**Implementation status:** Phase 3 complete; pending senior review
+**Implementation status:** Implemented — passed two senior reviews (visual + architecture); all P0/P1 fixed and re-reviewed (fix commit `3c08875`). Outstanding human steps: apply `20260920000000_add_theme_preference.sql` to the live Supabase project (required before new-account signup) and run the on-device checklist. Deferred P2s: Appearance swatches preview stored pastels, dark Switch on-track low contrast, avatar boundary for dark presets, no derived-tint contrast test, no SegmentedControl regression test, dark-tinted shadows (spec out of scope).
 
 ---
 
