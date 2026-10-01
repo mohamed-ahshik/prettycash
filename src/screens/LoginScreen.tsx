@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { fonts, radii } from '../theme';
 import type { ThemeColors } from '../theme';
+import { getErrorMessage } from '../utils/errorMessage';
 
 const SHOW_GOOGLE_SIGN_IN = false;
 
@@ -22,7 +23,11 @@ export function LoginScreen() {
     try {
       await signInWithProvider(provider);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      setError(
+        e && typeof e === 'object'
+          ? getErrorMessage(e)
+          : 'Something went wrong. Please try again.'
+      );
     } finally {
       setBusy(null);
     }

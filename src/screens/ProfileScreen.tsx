@@ -397,6 +397,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderTopColor: colors.border,
   },
   settingLeft: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -418,7 +420,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.mutedForeground,
   },
   appearanceControl: {
-    width: 176,
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: 176,
   },
   appearanceSegment: {
     marginTop: 0,

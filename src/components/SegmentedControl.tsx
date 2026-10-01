@@ -73,7 +73,10 @@ export function SegmentedControl<T extends string>({
             onSelect(option.value);
           }}
         >
-          <Text style={[styles.label, selected === option.value && styles.activeLabel]}>
+          <Text
+            style={[styles.label, selected === option.value && styles.activeLabel]}
+            numberOfLines={1}
+          >
             {option.label}
           </Text>
         </Pressable>

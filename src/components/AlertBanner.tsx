@@ -8,7 +8,6 @@ import { Icon } from './Icon';
 export function AlertBanner({ message }: { message: string }) {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
-
   return (
     <View style={styles.wrap}>
       <Icon name="alert-circle-outline" size={18} color={colors.expenseText} />

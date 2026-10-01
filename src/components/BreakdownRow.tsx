@@ -40,7 +40,6 @@ export function BreakdownRow({ item }: BreakdownRowProps) {
 
   return (
     <View style={styles.container}>
-      {/* Icon badge */}
       <CategoryAvatar icon={item.icon} colorBg={item.bgColor} colorFg={item.color} size={38} />
 
       {/* Main details and progress bar */}
