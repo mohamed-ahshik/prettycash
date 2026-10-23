@@ -8,6 +8,8 @@
 
 **Tech Stack:** React Native 0.86 / Expo SDK 57, react-native-web, TypeScript, `expo-image-picker`, `jest-expo`.
 
+**Implementation status:** Implemented; 2026-10-22 fixes handle the backend `rejected` (`NOT_A_RECEIPT`) job status immediately, bound hung requests (enqueue 60s for large base64 images, polls 15s) instead of leaving the analyzing screen open indefinitely, and surface image-picker launch failures (including Expo Go cache write errors) as an in-sheet message instead of an uncaught rejection. 2026-10-24: in development the vision base URL derives the backend host from Expo's `hostUri` (same host as Metro, port 8000), so LAN IP changes no longer break receipt scanning; the env URL remains the fallback for public or tunnel hosts. The “Reading receipt…” scan line now uses a classic `Animated.loop` so it survives the post-upload re-render during polling (the Reanimated `withRepeat` loop froze on web).
+
 ## Global Constraints
 
 - Expo SDK `~57.0.21`; consult https://docs.expo.dev/versions/v57.0.0/ for any Expo API before writing code.

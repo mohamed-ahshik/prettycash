@@ -4,7 +4,7 @@ import {
 
 it('maps a category row snake_case to CategoryItem', () => {
   expect(mapCategoryRow({ id: '1', name: 'Food', type: 'expense', icon: 'cart-outline', color_bg: '#DFF0EB', color_fg: '#00674F', notes: 'x' }))
-    .toEqual({ id: '1', name: 'Food', type: 'expense', icon: 'cart-outline', colorBg: '#DFF0EB', colorFg: '#00674F', notes: 'x' });
+    .toEqual({ id: '1', name: 'Food', type: 'expense', icon: 'cart-outline', colorBg: '#DFF0EB', colorFg: '#00674F', notes: 'x', isUncategorized: false });
 });
 
 it('maps a transaction row and its items', () => {
@@ -32,7 +32,13 @@ it('maps recurring and profile rows', () => {
   expect(mapRecurringRow({ id: 'r1', name: 'Rent', type: 'expense', amount: 1200, category_name: 'Bills', icon: 'file-document-outline', color_bg: '#F3E8FF', color_fg: '#7C3AED', day_of_month: 1, active: true }))
     .toEqual({ id: 'r1', name: 'Rent', type: 'expense', amount: 1200, category: 'Bills', icon: 'file-document-outline', colorBg: '#F3E8FF', colorFg: '#7C3AED', dayOfMonth: 1, active: true });
   expect(mapProfileRow({ name: 'Maya', email: 'm@x.co', currency: 'USD ($)', notifications_enabled: true, haptics_enabled: false, member_since: 'Sep 2026' }))
-    .toEqual({ name: 'Maya', initial: 'M', email: 'm@x.co', currency: 'USD ($)', notificationsEnabled: true, hapticsEnabled: false, themePreference: 'system', memberSince: 'Sep 2026' });
+    .toEqual({ name: 'Maya', initial: 'M', email: 'm@x.co', currency: 'USD ($)', notificationsEnabled: true, hapticsEnabled: false, themePreference: 'system', autoCategorize: true, memberSince: 'Sep 2026' });
+});
+
+it('maps the auto-categorize and Uncategorized flags', () => {
+  expect(mapCategoryRow({ is_uncategorized: true }).isUncategorized).toBe(true);
+  expect(mapProfileRow({ auto_categorize: false }).autoCategorize).toBe(false);
+  expect(mapProfileRow({}).autoCategorize).toBe(true);
 });
 
 it('maps the stored theme preference with a system default', () => {

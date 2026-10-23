@@ -22,4 +22,5 @@ export interface UserProfile {
   notificationsEnabled: boolean;
   hapticsEnabled: boolean;
   themePreference: ThemePreference;
+  autoCategorize: boolean;
 }

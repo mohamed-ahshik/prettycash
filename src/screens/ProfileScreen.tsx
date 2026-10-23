@@ -221,6 +221,27 @@ export function ProfileScreen() {
 
           <View style={[styles.settingItem, styles.borderTop]}>
             <View style={styles.settingLeft}>
+              <Icon name="tag-multiple-outline" size={20} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>Auto-categorize receipts</Text>
+                <Text style={styles.settingHint}>
+                  Gemini picks one of your expense categories from the receipt.
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={profile.autoCategorize}
+              onValueChange={(val) => {
+                hapticSelection();
+                updateProfile({ autoCategorize: val });
+              }}
+              trackColor={{ false: colors.border, true: colors.secondary }}
+              thumbColor={profile.autoCategorize ? colors.primary : '#FFFFFF'}
+            />
+          </View>
+
+          <View style={[styles.settingItem, styles.borderTop]}>
+            <View style={styles.settingLeft}>
               <Icon name="theme-light-dark" size={20} color={colors.primary} />
               <Text style={styles.settingLabel}>Appearance</Text>
             </View>
@@ -403,10 +424,20 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  settingText: {
+    flexShrink: 1,
+  },
   settingLabel: {
     fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.foreground,
+  },
+  settingHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
+    marginTop: 2,
   },
   settingRight: {
     flexDirection: 'row',
@@ -420,8 +451,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.mutedForeground,
   },
   appearanceControl: {
+    flexBasis: 176,
+    flexGrow: 0,
     flexShrink: 1,
-    minWidth: 0,
+    minWidth: 168,
     maxWidth: 176,
   },
   appearanceSegment: {

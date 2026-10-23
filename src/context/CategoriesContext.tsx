@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { CategoryItem } from '../types';
-import { listCategories, insertCategory } from '../data/repositories/categoriesRepo';
+import { listCategories, insertCategory, updateCategory as repoUpdateCategory } from '../data/repositories/categoriesRepo';
 import { useAuth } from './AuthContext';
 
 interface CategoriesContextType {
   expenseCategories: CategoryItem[];
   incomeCategories: CategoryItem[];
   addCategory: (item: Omit<CategoryItem, 'id'>) => Promise<void>;
+  updateCategory: (id: string, patch: Pick<CategoryItem, 'name' | 'notes'>) => Promise<void>;
   loading: boolean;
   error: string | null;
 }
@@ -55,8 +56,17 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const updateCategory = async (id: string, patch: Pick<CategoryItem, 'name' | 'notes'>) => {
+    const updated = await repoUpdateCategory(id, patch);
+    if (updated.type === 'expense') {
+      setExpenseCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    } else {
+      setIncomeCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    }
+  };
+
   return (
-    <CategoriesContext.Provider value={{ expenseCategories, incomeCategories, addCategory, loading, error }}>
+    <CategoriesContext.Provider value={{ expenseCategories, incomeCategories, addCategory, updateCategory, loading, error }}>
       {children}
     </CategoriesContext.Provider>
   );

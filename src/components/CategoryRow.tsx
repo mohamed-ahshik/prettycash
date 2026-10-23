@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { fonts } from '../theme';
 import type { ThemeColors } from '../theme';
@@ -10,13 +10,17 @@ import { Icon } from './Icon';
 interface CategoryRowProps {
   item: CategoryItem;
   isFirst?: boolean;
+  onPress?: () => void;
 }
 
-export function CategoryRow({ item, isFirst = false }: CategoryRowProps) {
+export function CategoryRow({ item, isFirst = false, onPress }: CategoryRowProps) {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   return (
-    <View style={[styles.row, !isFirst && styles.borderTop]}>
+    <Pressable
+      style={({ pressed }) => [styles.row, !isFirst && styles.borderTop, pressed && styles.pressed]}
+      onPress={onPress}
+    >
       <CategoryAvatar icon={item.icon} colorBg={item.colorBg} colorFg={item.colorFg} size={42} />
       <View style={styles.info}>
         <Text style={styles.name}>{item.name}</Text>
@@ -27,7 +31,7 @@ export function CategoryRow({ item, isFirst = false }: CategoryRowProps) {
         ) : null}
       </View>
       <Icon name="chevron-right" size={18} color={colors.mutedForeground} />
-    </View>
+    </Pressable>
   );
 }
 
@@ -57,5 +61,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.mutedForeground,
     fontFamily: fonts.regular,
     marginTop: 2,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

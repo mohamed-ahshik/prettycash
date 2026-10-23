@@ -28,6 +28,13 @@ export async function getImageBase64(
   return null;
 }
 
+function pickerErrorMessage(e: unknown, fallback: string): string {
+  if (e instanceof Error && /write|file|storage|cache/i.test(e.message)) {
+    return 'Could not save the photo. Free up device storage or clear Expo Go cache, then try again.';
+  }
+  return fallback;
+}
+
 export function ReceiptImagePicker({ onPicked, onCancel }: ReceiptImagePickerProps) {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
@@ -37,41 +44,49 @@ export function ReceiptImagePicker({ onPicked, onCancel }: ReceiptImagePickerPro
   const pickFromGallery = async () => {
     setError(null);
     setPermissionDenied(false);
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      base64: true,
-      quality: 0.8,
-    });
-    if (result.canceled) {
-      onCancel();
-      return;
-    }
-    const extracted = await getImageBase64(result.assets[0]);
-    if (extracted) {
-      onPicked(extracted.base64, extracted.mimeType);
-    } else {
-      setError('Could not read the selected image.');
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        base64: true,
+        quality: 0.8,
+      });
+      if (result.canceled) {
+        onCancel();
+        return;
+      }
+      const extracted = await getImageBase64(result.assets[0]);
+      if (extracted) {
+        onPicked(extracted.base64, extracted.mimeType);
+      } else {
+        setError('Could not read the selected image.');
+      }
+    } catch (e) {
+      setError(pickerErrorMessage(e, 'Could not open the photo library. Please try again.'));
     }
   };
 
   const takePhoto = async () => {
     setError(null);
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) {
-      setPermissionDenied(true);
-      return;
-    }
-    setPermissionDenied(false);
-    const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.8 });
-    if (result.canceled) {
-      onCancel();
-      return;
-    }
-    const extracted = await getImageBase64(result.assets[0]);
-    if (extracted) {
-      onPicked(extracted.base64, extracted.mimeType);
-    } else {
-      setError('Could not read the captured photo.');
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        setPermissionDenied(true);
+        return;
+      }
+      setPermissionDenied(false);
+      const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.8 });
+      if (result.canceled) {
+        onCancel();
+        return;
+      }
+      const extracted = await getImageBase64(result.assets[0]);
+      if (extracted) {
+        onPicked(extracted.base64, extracted.mimeType);
+      } else {
+        setError('Could not read the captured photo.');
+      }
+    } catch (e) {
+      setError(pickerErrorMessage(e, 'Could not capture the photo. Please try again.'));
     }
   };
 

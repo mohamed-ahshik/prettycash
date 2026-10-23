@@ -35,6 +35,8 @@ export interface ReceiptDraft {
   time?: string;
   note: string;
   items: { name: string; quantity?: number; price: number }[];
+  categoryId?: string;
+  categoryConfidence?: number;
 }
 
 export * from './category';

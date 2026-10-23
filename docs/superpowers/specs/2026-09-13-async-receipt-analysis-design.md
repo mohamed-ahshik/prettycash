@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-13
 **Status:** Approved for implementation
-**Implementation status:** Implemented
+**Implementation status:** Implemented. 2026-10-22 fixes: handle the backend `rejected` status (`NOT_A_RECEIPT`) immediately instead of polling until the 120s timeout, and bound HTTP requests so a dead/restarting backend cannot leave the UI on the analyzing screen indefinitely (enqueue 60s for large base64 images, polls 15s).
 
 ---
 
@@ -87,15 +87,18 @@ export interface ReceiptDraft {
 
 1. **Config guard** — if `EXPO_PUBLIC_VISION_BASE_URL` / `EXPO_PUBLIC_VISION_API_KEY` are unset → `throw new ReceiptAnalysisError('NOT_CONFIGURED', ...)`.
 2. **Enqueue** — `POST {baseUrl}/analyze-receipt` with the image body. On fetch failure → `NETWORK`. On non-2xx → `throw await toError(res)`. Parse `{ jobId }`.
+The enqueue request uses an `AbortController` timeout of 60s because a camera/gallery image is sent as base64 and can be several MB; each poll uses 15s. An aborted request is treated as `NETWORK`, so a restarting or unreachable backend cannot leave the UI on the analyzing screen indefinitely.
+
 3. **Poll** — up to **120 attempts**, 1s apart (~2 min):
    - `GET {baseUrl}/jobs/{jobId}`.
    - fetch failure → `NETWORK`; non-2xx → `throw await toError(res)`.
    - `status === 'completed'` → `return normalizeReceiptDraft(body.result)`.
    - `status === 'failed'` → `throw new ReceiptAnalysisError('FAILED', body.error?.message ?? 'Receipt analysis failed.')`.
+   - `status === 'rejected'` → `throw new ReceiptAnalysisError(body.error?.code ?? 'NOT_A_RECEIPT', body.error?.message ?? "This image doesn't look like a receipt or invoice.")`.
    - otherwise (`pending`/`processing`) → wait 1s and continue.
 4. **Timeout** — after 120 attempts → `throw new ReceiptAnalysisError('TIMEOUT', 'Receipt analysis timed out.')`.
 
-Keep the existing `ReceiptAnalysisError` class (codes: `NOT_CONFIGURED`, `NETWORK`, `TIMEOUT`, `FAILED`, `INTERNAL`) and a `toError(res: Response)` helper that reads `body.error?.message` (falling back to `Request failed (${res.status})`).
+Keep the existing `ReceiptAnalysisError` class (codes: `NOT_CONFIGURED`, `NETWORK`, `TIMEOUT`, `FAILED`, `NOT_A_RECEIPT`, `INTERNAL`) and a `toError(res: Response)` helper that reads `body.error?.message` (falling back to `Request failed (${res.status})`).
 
 `normalizeReceiptDraft` stays and is applied to the `completed` `result` (and remains the single place that shapes a raw payload into `ReceiptDraft`).
 
@@ -124,6 +127,7 @@ No structural change is expected — the current `handlePicked` already:
 Could not reach the vision backend. (NETWORK)
 Receipt analysis timed out. (TIMEOUT)
 Receipt analysis failed. (FAILED)
+This image doesn't look like a receipt or invoice. (NOT_A_RECEIPT)
 ```
 
 - Format: `` `${e.message} (${e.code})` ``.
@@ -141,8 +145,10 @@ Also verify:
 - Add `analyzeReceipt` tests with a mocked `fetch`:
   - **completed**: enqueue → `{ jobId }`; first poll → `{ status: 'completed', result }` → resolves to the normalized draft.
   - **failed**: poll → `{ status: 'failed', error: { message } }` → rejects with `ReceiptAnalysisError` code `FAILED`.
+  - **rejected**: poll → `{ status: 'rejected', error: { code: 'NOT_A_RECEIPT', message } }` → rejects immediately with code `NOT_A_RECEIPT` and does not keep polling.
   - **timeout**: poll always `pending` → rejects with code `TIMEOUT` (use fake timers to avoid a real 2-minute wait).
   - **not configured**: env unset → rejects with code `NOT_CONFIGURED`.
+  - **hung enqueue**: fetch never resolves → aborts after 60s and rejects with code `NETWORK` (fake timers).
 
 ---
 

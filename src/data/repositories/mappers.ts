@@ -9,6 +9,7 @@ export function mapCategoryRow(row: any): CategoryItem {
     colorBg: row.color_bg ?? '#DFF0EB',
     colorFg: row.color_fg ?? '#00674F',
     notes: row.notes ?? undefined,
+    isUncategorized: row.is_uncategorized === true,
   };
 }
 
@@ -64,6 +65,7 @@ export function mapProfileRow(row: any): UserProfile {
     notificationsEnabled: row.notifications_enabled,
     hapticsEnabled: row.haptics_enabled,
     themePreference,
+    autoCategorize: row.auto_categorize ?? true,
     memberSince: row.member_since ?? '',
   };
 }

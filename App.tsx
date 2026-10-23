@@ -130,6 +130,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
             notificationsEnabled: true,
             hapticsEnabled: true,
             themePreference: 'system',
+            autoCategorize: true,
           });
         }
         await seedDefaultCategoriesIfNeeded();

@@ -9,14 +9,15 @@ import { useCategories } from '../context/CategoriesContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { fonts, radii, shadows, text } from '../theme';
 import type { ThemeColors } from '../theme';
-import { CategoryType } from '../types';
+import { CategoryItem, CategoryType } from '../types';
 
 export function CategoriesScreen() {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const [activeType, setActiveType] = useState<CategoryType>('expense');
-  const { expenseCategories, incomeCategories, addCategory } = useCategories();
+  const { expenseCategories, incomeCategories, addCategory, updateCategory } = useCategories();
   const [modalVisible, setModalVisible] = useState(false);
+  const [editing, setEditing] = useState<CategoryItem | null>(null);
 
   const currentList = activeType === 'expense' ? expenseCategories : incomeCategories;
 
@@ -42,17 +43,24 @@ export function CategoriesScreen() {
 
         <View style={styles.card}>
           {currentList.map((item, index) => (
-            <CategoryRow key={item.id} item={item} isFirst={index === 0} />
+            <CategoryRow key={item.id} item={item} isFirst={index === 0} onPress={() => setEditing(item)} />
           ))}
         </View>
       </ScrollView>
 
       <AddCategoryModal
-        visible={modalVisible}
-        type={activeType}
-        onClose={() => setModalVisible(false)}
+        visible={modalVisible || editing !== null}
+        type={editing?.type ?? activeType}
+        initial={editing ?? undefined}
+        onClose={() => {
+          setModalVisible(false);
+          setEditing(null);
+        }}
         onSave={(item) => {
-          addCategory(item).catch(() => {});
+          const action = editing
+            ? updateCategory(editing.id, { name: item.name, notes: item.notes })
+            : addCategory(item);
+          action.catch(() => {});
         }}
       />
     </SafeAreaView>
