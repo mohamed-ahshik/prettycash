@@ -11,12 +11,13 @@ import {
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useCategories } from '../context/CategoriesContext';
 import { useMonth } from '../context/MonthContext';
-import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { useThemedStyles } from '../context/ThemeContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { getProfile } from '../data/repositories/profileRepo';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { hapticSuccess } from '../lib/haptics';
 import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
+import type { PickedReceiptImage } from '../services/receiptPicker';
 import { fonts, radii } from '../theme';
 import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
@@ -24,30 +25,35 @@ import { ReceiptDraft, Transaction } from '../types';
 import { monthYearFromDate } from '../utils/aggregate';
 import { buildCategoryPayload, selectInitialCategoryId } from '../utils/categorySelection';
 import { BottomSheet } from './BottomSheet';
-import { Icon } from './Icon';
-import { ReceiptImagePicker } from './ReceiptImagePicker';
 import { TransactionForm } from './TransactionForm';
 
 interface AddTransactionSheetProps {
   visible: boolean;
+  initialImage?: PickedReceiptImage | null;
+  startManual?: boolean;
   onClose: () => void;
 }
 
-type Flow = 'chooser' | 'capture' | 'analyzing' | 'form';
+type Flow = 'analyzing' | 'form';
 
-export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetProps) {
+export function AddTransactionSheet({
+  visible,
+  initialImage,
+  startManual = false,
+  onClose,
+}: AddTransactionSheetProps) {
   const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
   const { addTransaction } = useTransactions();
   const { expenseCategories } = useCategories();
   const { setMonth } = useMonth();
-  const [flow, setFlow] = useState<Flow>('chooser');
+  const [flow, setFlow] = useState<Flow>('form');
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receiptPath, setReceiptPath] = useState<string | null>(null);
   const [receiptData, setReceiptData] = useState<unknown>(null);
   const [initialCategoryId, setInitialCategoryId] = useState<string | null>(null);
   const requestToken = useRef(0);
+  const startKey = useRef<string | null>(null);
   const scanAnim = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
@@ -80,7 +86,8 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   useEffect(() => {
     if (!visible) {
       requestToken.current += 1;
-      setFlow('chooser');
+      startKey.current = null;
+      setFlow('form');
       setDraft(null);
       setError(null);
       setReceiptPath(null);
@@ -149,6 +156,18 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setFlow('form');
   };
 
+  useEffect(() => {
+    if (!visible) return;
+    const key = initialImage ? 'image' : startManual ? 'manual' : null;
+    if (!key || startKey.current === key) return;
+    startKey.current = key;
+    if (initialImage) {
+      void handlePicked(initialImage.base64, initialImage.mimeType);
+    } else {
+      handleManual();
+    }
+  }, [visible, initialImage, startManual]);
+
   const handleSubmit = async (input: Omit<Transaction, 'id'>) => {
     try {
       await addTransaction({ ...input, receiptPath: receiptPath ?? undefined, receiptData: receiptData ?? undefined });
@@ -160,18 +179,6 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
       setError(e instanceof Error ? e.message : 'Failed to save transaction.');
     }
   };
-
-  const renderHeader = (title: string, subtitle?: string) => (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      </View>
-      <Pressable style={styles.closeButton} onPress={onClose}>
-        <Icon name="close" size={20} color={colors.mutedForeground} />
-      </Pressable>
-    </View>
-  );
 
   return (
     <BottomSheet
@@ -185,42 +192,6 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
         style={flow === 'form' ? styles.stepFill : undefined}
         entering={FadeIn.duration(motion.duration.selection)}
       >
-      {flow === 'chooser' && (
-        <View style={styles.body}>
-          {renderHeader('Add Transaction', 'How would you like to add it?')}
-          <Pressable style={styles.optionButton} onPress={() => setFlow('capture')}>
-            <View style={styles.optionIcon}>
-              <Icon name="camera" size={22} color={colors.primary} />
-            </View>
-            <View style={styles.optionTextWrap}>
-              <Text style={styles.optionTitle}>Scan receipt</Text>
-              <Text style={styles.optionSubtitle}>Use AI to fill in the details</Text>
-            </View>
-            <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
-          </Pressable>
-          <Pressable style={styles.optionButton} onPress={handleManual}>
-            <View style={styles.optionIcon}>
-              <Icon name="pencil" size={22} color={colors.primary} />
-            </View>
-            <View style={styles.optionTextWrap}>
-              <Text style={styles.optionTitle}>Enter manually</Text>
-              <Text style={styles.optionSubtitle}>Type the details yourself</Text>
-            </View>
-            <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
-          </Pressable>
-        </View>
-      )}
-
-      {flow === 'capture' && (
-        <View style={styles.body}>
-          {renderHeader('Scan Receipt', 'Take a photo or choose from your library')}
-          <ReceiptImagePicker
-            onPicked={handlePicked}
-            onCancel={() => setFlow('chooser')}
-          />
-        </View>
-      )}
-
       {flow === 'analyzing' && (
         <View style={styles.analyzingWrap}>
           <View style={styles.scanBox}>
@@ -254,6 +225,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
             initialCategoryId={initialCategoryId ?? undefined}
             receiptDate={draft?.date}
             error={error ?? undefined}
+            autoFocusName={startManual}
             onSubmit={handleSubmit}
             onCancel={onClose}
           />
@@ -265,66 +237,6 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
-    color: colors.foreground,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontFamily: fonts.medium,
-    marginTop: 2,
-  },
-  closeButton: {
-    padding: 6,
-    borderRadius: 16,
-    backgroundColor: colors.muted,
-  },
-  body: {
-    gap: 12,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  optionIcon: {
-    height: 42,
-    width: 42,
-    borderRadius: 21,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionTextWrap: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: fonts.semibold,
-    color: colors.foreground,
-  },
-  optionSubtitle: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontFamily: fonts.regular,
-    marginTop: 2,
-  },
   scanBox: {
     width: '100%',
     height: 120,
@@ -367,12 +279,5 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   formWrap: {
     flex: 1,
-  },
-  errorText: {
-    fontSize: 13,
-    fontFamily: fonts.medium,
-    color: colors.expenseText,
-    marginBottom: 8,
-    textAlign: 'center',
   },
 });

@@ -57,7 +57,7 @@ export function HomeScreen() {
             <EmptyState
               icon="receipt"
               title="No transactions yet"
-              subtitle="Tap + to add one and it will show up here."
+              subtitle="Tap the camera to scan a receipt, or the pencil to enter it manually."
             />
           ) : (
             groups.map((group) => (

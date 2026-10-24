@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -28,6 +28,7 @@ interface TransactionFormProps {
   submitLabel?: string;
   receiptDate?: string;
   error?: string;
+  autoFocusName?: boolean;
   onDelete?: () => void;
   onSubmit: (input: Omit<Transaction, 'id'>) => void;
   onCancel: () => void;
@@ -72,6 +73,7 @@ export function TransactionForm({
   submitLabel = 'Save',
   receiptDate,
   error,
+  autoFocusName = false,
   onDelete,
   onSubmit,
   onCancel,
@@ -98,6 +100,13 @@ export function TransactionForm({
     initialCategoryId ?? expenseCategories[0]?.id ?? null
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const nameRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+
+  useEffect(() => {
+    if (!autoFocusName) return;
+    const timer = setTimeout(() => nameRef.current?.focus(), 350);
+    return () => clearTimeout(timer);
+  }, [autoFocusName]);
 
   const categories = type === 'expense' ? expenseCategories : incomeCategories;
   const valid = name.trim().length > 0 && Number(amount) > 0;
@@ -159,6 +168,7 @@ export function TransactionForm({
       >
         <Text style={styles.fieldLabel}>Name *</Text>
         <TextInput
+          ref={nameRef}
           style={styles.input}
           placeholder="e.g. Coffee or Groceries"
           placeholderTextColor={colors.mutedForeground}
