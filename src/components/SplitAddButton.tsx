@@ -1,13 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { hapticSelection, hapticSuccess } from '../lib/haptics';
@@ -21,7 +14,7 @@ const HINT_STORAGE_KEY = '@prettycash/splitAddHintSeen';
 const RING_SIZE = 52;
 const RING_RADIUS = 23;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const RING_TICK_MS = 50;
 
 interface SplitAddButtonProps {
   onScan: () => void;
@@ -32,11 +25,12 @@ interface SplitAddButtonProps {
 export function SplitAddButton({ onScan, onGallery, onManual }: SplitAddButtonProps) {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
-  const progress = useRef(new Animated.Value(0)).current;
   const longPressFired = useRef(false);
   const hintVisibleRef = useRef(false);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ringTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [pressing, setPressing] = useState(false);
+  const [holdProgress, setHoldProgress] = useState(0);
   const [hintVisible, setHintVisible] = useState(false);
 
   const dismissHint = useCallback(() => {
@@ -73,22 +67,41 @@ export function SplitAddButton({ onScan, onGallery, onManual }: SplitAddButtonPr
   }, [dismissHint]);
 
   const stopRing = useCallback(() => {
-    progress.stopAnimation();
-    progress.setValue(0);
+    if (ringTimer.current) {
+      clearInterval(ringTimer.current);
+      ringTimer.current = null;
+    }
     setPressing(false);
-  }, [progress]);
+    setHoldProgress(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (ringTimer.current) {
+        clearInterval(ringTimer.current);
+        ringTimer.current = null;
+      }
+    };
+  }, []);
 
   const startRing = () => {
     longPressFired.current = false;
+    if (ringTimer.current) {
+      clearInterval(ringTimer.current);
+      ringTimer.current = null;
+    }
     setPressing(true);
-    progress.setValue(0);
+    setHoldProgress(0);
     hapticSelection();
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: GALLERY_HOLD_MS,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start();
+    const started = Date.now();
+    ringTimer.current = setInterval(() => {
+      const next = Math.min(1, (Date.now() - started) / GALLERY_HOLD_MS);
+      setHoldProgress(next);
+      if (next >= 1 && ringTimer.current) {
+        clearInterval(ringTimer.current);
+        ringTimer.current = null;
+      }
+    }, RING_TICK_MS);
   };
 
   const openGallery = () => {
@@ -113,15 +126,10 @@ export function SplitAddButton({ onScan, onGallery, onManual }: SplitAddButtonPr
     onManual();
   };
 
-  const dashOffset = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [RING_CIRCUMFERENCE, 0],
-  });
-
   return (
     <View style={styles.wrap}>
       {hintVisible ? (
-        <View style={styles.hint} pointerEvents="none">
+        <View style={styles.hint}>
           <Text style={styles.hintText}>Tap camera to scan · Hold 2s for gallery</Text>
           <View style={styles.hintArrow} />
         </View>
@@ -163,7 +171,6 @@ export function SplitAddButton({ onScan, onGallery, onManual }: SplitAddButtonPr
               height={RING_SIZE}
               viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
               style={styles.ring}
-              pointerEvents="none"
             >
               <Circle
                 cx={RING_SIZE / 2}
@@ -173,7 +180,7 @@ export function SplitAddButton({ onScan, onGallery, onManual }: SplitAddButtonPr
                 strokeWidth={2.5}
                 fill="none"
               />
-              <AnimatedCircle
+              <Circle
                 cx={RING_SIZE / 2}
                 cy={RING_SIZE / 2}
                 r={RING_RADIUS}
@@ -181,7 +188,7 @@ export function SplitAddButton({ onScan, onGallery, onManual }: SplitAddButtonPr
                 strokeWidth={2.5}
                 strokeLinecap="round"
                 strokeDasharray={[RING_CIRCUMFERENCE, RING_CIRCUMFERENCE]}
-                strokeDashoffset={dashOffset}
+                strokeDashoffset={RING_CIRCUMFERENCE * (1 - holdProgress)}
                 fill="none"
                 transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
               />
@@ -236,6 +243,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     position: 'absolute',
     top: -4,
     left: -4,
+    pointerEvents: 'none',
   },
   hint: {
     position: 'absolute',
@@ -248,6 +256,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.foreground,
     zIndex: 40,
     elevation: 12,
+    pointerEvents: 'none',
     ...shadows.e2,
   },
   hintText: {

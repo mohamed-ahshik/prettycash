@@ -201,7 +201,7 @@ Tap pencil
 - `src/components/ReceiptImagePicker.tsx` — remove; move `getImageBase64` into `src/services/receiptPicker.ts`.
 - `src/services/__tests__` — add tests for the picker helper.
 
-The hold ring uses the already-installed `react-native-svg` with a classic `Animated` value (not Reanimated) to avoid the web freeze seen with the scan-line animation.
+The hold ring uses the already-installed `react-native-svg` with a plain `Circle` and an interval-driven progress state. This avoids the web crash caused by `Animated.createAnimatedComponent(Circle)` and the earlier Reanimated web freeze.
 
 ### 5.2 Interfaces
 

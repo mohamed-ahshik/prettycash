@@ -53,7 +53,7 @@
 - [ ] Render a pill: pencil left, divider, camera right. Each half is 44×44.
 - [ ] Pencil `onPress` calls `onManual`; pressed state shows `rgba(255,255,255,0.16)` and scales to 0.94.
 - [ ] Camera `onPressIn` starts the 2s ring; `onLongPress` sets a `longPressFired` ref, resets the ring, fires `hapticSuccess()`, and calls `onGallery`; `onPressOut` resets the ring; `onPress` calls `onScan` unless `longPressFired`.
-- [ ] Use `delayLongPress={2000}`, a white progress ring built with `react-native-svg` and `Animated.createAnimatedComponent(Circle)`, and `useNativeDriver: false`.
+- [ ] Use `delayLongPress={2000}` and a white progress ring built with a plain `react-native-svg` `Circle` plus interval-driven progress state. Do not use an animated SVG component; it crashes on web.
 - [ ] Add the camera `accessibilityHint="Tap to scan. Hold for 2 seconds to choose from gallery."` and accessibility action `gallery`.
 - [ ] Show the first-use coach mark once using AsyncStorage key `@prettycash/splitAddHintSeen`: copy `Tap camera to scan · Hold 2s for gallery`, auto-hide after 6s, dismiss on either action.
 - [ ] Run `npx tsc --noEmit`.
