@@ -1,15 +1,19 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { useReceiptPicker } from '../hooks/useReceiptPicker';
 import { fonts, radii, shadows } from '../theme';
 import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { hapticSelection } from '../lib/haptics';
+import type { PickedReceiptImage } from '../services/receiptPicker';
 import { AddTransactionSheet } from './AddTransactionSheet';
 import { Icon } from './Icon';
+import { PickerErrorSheet } from './PickerErrorSheet';
+import { SplitAddButton } from './SplitAddButton';
 
 type TabName = 'Home' | 'Insights' | 'Categories' | 'Profile';
 
@@ -25,10 +29,11 @@ interface TabItemProps {
   icon: string;
   color: string;
   isFocused: boolean;
+  compact?: boolean;
   onPress: () => void;
 }
 
-function TabItem({ label, icon, color, isFocused, onPress }: TabItemProps) {
+function TabItem({ label, icon, color, isFocused, compact = false, onPress }: TabItemProps) {
   const styles = useThemedStyles(makeStyles);
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -43,9 +48,12 @@ function TabItem({ label, icon, color, isFocused, onPress }: TabItemProps) {
         scale.value = withSpring(1, motion.spring.press);
       }}
     >
-      <Animated.View style={[styles.item, animatedStyle]}>
+      <Animated.View style={[styles.item, compact && styles.itemCompact, animatedStyle]}>
         <Icon name={icon} size={22} color={color} />
-        <Text style={[styles.label, { color, fontFamily: isFocused ? fonts.bold : fonts.medium }]}>
+        <Text
+          style={[styles.label, compact && styles.labelCompact, { color, fontFamily: isFocused ? fonts.bold : fonts.medium }]}
+          numberOfLines={1}
+        >
           {label}
         </Text>
         {isFocused ? <View style={styles.dot} /> : null}
@@ -58,8 +66,51 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const compact = width < 340;
   const activeRoute = state.routes[state.index];
+  const split = useReceiptPicker();
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [initialImage, setInitialImage] = useState<PickedReceiptImage | null>(null);
+  const [startManual, setStartManual] = useState(false);
+  const [sheetKey, setSheetKey] = useState(0);
+
+  const scan = async () => {
+    split.clearError();
+    const image = await split.pickFromCamera();
+    if (!image) return;
+    setInitialImage(image);
+    setStartManual(false);
+    setSheetVisible(true);
+  };
+
+  const gallery = async () => {
+    split.clearError();
+    const image = await split.pickFromGallery();
+    if (!image) return;
+    setInitialImage(image);
+    setStartManual(false);
+    setSheetVisible(true);
+  };
+
+  const manual = () => {
+    split.clearError();
+    setInitialImage(null);
+    setStartManual(true);
+    setSheetVisible(true);
+  };
+
+  const closeSheet = () => {
+    setSheetVisible(false);
+    setInitialImage(null);
+    setStartManual(false);
+  };
+
+  const retake = () => {
+    closeSheet();
+    setSheetKey((key) => key + 1);
+    void scan();
+  };
 
   const renderTab = (name: TabName) => {
     const route = state.routes.find((r) => r.name === name);
@@ -77,6 +128,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         icon={isFocused ? icons.active : icons.inactive}
         color={color}
         isFocused={isFocused}
+        compact={compact}
         onPress={() => {
           hapticSelection();
           const event = navigation.emit({
@@ -93,20 +145,35 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   };
 
   return (
-    <View style={[styles.wrapper, { bottom: insets.bottom + 20 }]}>
+    <View style={[styles.wrapper, compact && styles.wrapperCompact, { bottom: insets.bottom + 20 }]}>
       {renderTab('Home')}
       {renderTab('Insights')}
-      <View style={styles.addWrap}>
-        <Pressable
-          style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-          onPress={() => setSheetVisible(true)}
-        >
-          <Icon name="plus" size={28} color={colors.primaryForeground} />
-        </Pressable>
-      </View>
+      <SplitAddButton
+        onScan={() => {
+          void scan();
+        }}
+        onGallery={() => {
+          void gallery();
+        }}
+        onManual={manual}
+      />
       {renderTab('Categories')}
       {renderTab('Profile')}
-      <AddTransactionSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} />
+      <AddTransactionSheet
+        key={sheetKey}
+        visible={sheetVisible}
+        initialImage={initialImage}
+        startManual={startManual}
+        onClose={closeSheet}
+        onRetake={retake}
+      />
+      <PickerErrorSheet
+        error={split.error}
+        onGallery={() => {
+          void gallery();
+        }}
+        onClose={split.clearError}
+      />
     </View>
   );
 }
@@ -128,38 +195,31 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     ...shadows.e2,
   },
   item: {
-    width: 56,
+    width: 48,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
   },
+  itemCompact: {
+    width: 44,
+  },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '500',
+  },
+  labelCompact: {
+    fontSize: 8.5,
+  },
+  wrapperCompact: {
+    left: 12,
+    right: 12,
+    paddingHorizontal: 4,
   },
   dot: {
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.primary,
-  },
-  addWrap: {
-    width: 56,
-    alignItems: 'center',
-  },
-  addButton: {
-    height: 56,
-    width: 56,
-    marginTop: -32,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.secondaryForeground,
-    borderWidth: 4,
-    borderColor: colors.background,
-  },
-  pressed: {
-    opacity: 0.85,
   },
 });

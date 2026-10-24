@@ -11,44 +11,263 @@ import {
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useCategories } from '../context/CategoriesContext';
 import { useMonth } from '../context/MonthContext';
-import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { useThemedStyles } from '../context/ThemeContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { getProfile } from '../data/repositories/profileRepo';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { hapticSuccess } from '../lib/haptics';
-import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
+import {
+  analyzeReceipt,
+  formatAnalysisError,
+  ReceiptAnalysisError,
+  resumeReceiptAnalysis,
+} from '../services/receiptAnalysis';
+import type { PickedReceiptImage } from '../services/receiptPicker';
 import { fonts, radii } from '../theme';
 import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { ReceiptDraft, Transaction } from '../types';
 import { monthYearFromDate } from '../utils/aggregate';
 import { buildCategoryPayload, selectInitialCategoryId } from '../utils/categorySelection';
+import { createId } from '../utils/ids';
+import { AnalysisRetryBar } from './AnalysisRetryBar';
+import type { AnalysisRetryKind } from './AnalysisRetryBar';
 import { BottomSheet } from './BottomSheet';
-import { Icon } from './Icon';
-import { ReceiptImagePicker } from './ReceiptImagePicker';
 import { TransactionForm } from './TransactionForm';
 
 interface AddTransactionSheetProps {
   visible: boolean;
+  initialImage?: PickedReceiptImage | null;
+  startManual?: boolean;
   onClose: () => void;
+  onRetake?: () => void;
 }
 
-type Flow = 'chooser' | 'capture' | 'analyzing' | 'form';
+type Flow = 'analyzing' | 'form';
 
-export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetProps) {
+interface AnalysisAttempt {
+  captureId: string;
+  requestId: string;
+  jobId?: string;
+  image: PickedReceiptImage;
+  receiptPath?: string;
+}
+
+interface RetryState {
+  kind: AnalysisRetryKind;
+}
+
+export function AddTransactionSheet({
+  visible,
+  initialImage,
+  startManual = false,
+  onClose,
+  onRetake,
+}: AddTransactionSheetProps) {
   const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
   const { addTransaction } = useTransactions();
   const { expenseCategories } = useCategories();
   const { setMonth } = useMonth();
-  const [flow, setFlow] = useState<Flow>('chooser');
+  const [flow, setFlow] = useState<Flow>('form');
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receiptPath, setReceiptPath] = useState<string | null>(null);
   const [receiptData, setReceiptData] = useState<unknown>(null);
   const [initialCategoryId, setInitialCategoryId] = useState<string | null>(null);
+  const [retryState, setRetryState] = useState<RetryState | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
   const requestToken = useRef(0);
+  const startKey = useRef<string | null>(null);
+  const startingRef = useRef(false);
+  const attemptRef = useRef<AnalysisAttempt | null>(null);
   const scanAnim = useRef(new RNAnimated.Value(0)).current;
+
+  const beginAnalyzing = (attempt: AnalysisAttempt) => {
+    setFlow('analyzing');
+    setDraft(null);
+    setError(null);
+    setReceiptData(null);
+    setInitialCategoryId(null);
+    setRetryState(null);
+    setReconnecting(false);
+    setReceiptPath(attempt.receiptPath ?? null);
+  };
+
+  const failAnalysis = (attempt: AnalysisAttempt, e: unknown) => {
+    const analysisError = e instanceof ReceiptAnalysisError ? e : null;
+    if (analysisError?.jobId) attempt.jobId = analysisError.jobId;
+    setReconnecting(false);
+    setError(formatAnalysisError(e));
+    setDraft(null);
+    setReceiptData(null);
+    setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
+    if (analysisError?.code === 'NOT_A_RECEIPT') {
+      setRetryState({ kind: 'rejected' });
+    } else if (analysisError?.code === 'FAILED') {
+      setRetryState({ kind: 'failed' });
+    } else if (analysisError?.code === 'TIMEOUT' && analysisError.jobId) {
+      setRetryState({ kind: 'timeout' });
+    } else if (analysisError?.phase === 'poll' && analysisError.jobId) {
+      setRetryState({ kind: 'poll' });
+    } else {
+      setRetryState({ kind: 'enqueue' });
+    }
+    setFlow('form');
+  };
+
+  const runAnalysis = async (
+    attempt: AnalysisAttempt,
+    token: number,
+    resume: boolean,
+  ) => {
+    let shouldAutoCategorize = false;
+    let categories: ReturnType<typeof buildCategoryPayload> = [];
+
+    if (!resume) {
+      let autoCategorize = true;
+      try {
+        const profile = await getProfile();
+        autoCategorize = profile?.autoCategorize ?? true;
+        if (token !== requestToken.current) return;
+      } catch {
+        autoCategorize = true;
+        if (token !== requestToken.current) return;
+      }
+      categories = buildCategoryPayload(expenseCategories);
+      shouldAutoCategorize = autoCategorize && categories.length > 0;
+    }
+
+    const onPollRetry = (retrying: boolean) => {
+      if (token === requestToken.current) setReconnecting(retrying);
+    };
+
+    try {
+      const result = resume && attempt.jobId
+        ? await resumeReceiptAnalysis(attempt.jobId, { onPollRetry })
+        : await analyzeReceipt(attempt.image.base64, attempt.image.mimeType, {
+            requestId: attempt.requestId,
+            autoCategorize: shouldAutoCategorize,
+            categories: shouldAutoCategorize ? categories : [],
+            onJobId: (jobId) => {
+              attempt.jobId = jobId;
+            },
+            onPollRetry,
+          });
+      if (token !== requestToken.current) return;
+      setReconnecting(false);
+      setDraft(result.draft);
+      setReceiptData(result.raw);
+      setInitialCategoryId(selectInitialCategoryId(result.draft, expenseCategories) ?? null);
+      setError(null);
+      setRetryState(null);
+      setFlow('form');
+    } catch (e) {
+      if (token !== requestToken.current) return;
+      failAnalysis(attempt, e);
+    }
+  };
+
+  const runCapture = async (attempt: AnalysisAttempt) => {
+    const token = ++requestToken.current;
+    beginAnalyzing(attempt);
+    try {
+      const path = await uploadReceipt(
+        attempt.image.base64,
+        attempt.image.mimeType,
+        attempt.captureId,
+      );
+      if (token !== requestToken.current) return;
+      attempt.receiptPath = path;
+      setReceiptPath(path);
+    } catch (e) {
+      if (token !== requestToken.current) return;
+      setError(e instanceof Error ? e.message : 'Receipt upload failed.');
+      setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
+      setRetryState({ kind: 'enqueue' });
+      setFlow('form');
+      return;
+    }
+    await runAnalysis(attempt, token, false);
+  };
+
+  const beginAttempt = async (attempt: AnalysisAttempt, resume: boolean) => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    try {
+      if (!resume && !attempt.receiptPath) {
+        await runCapture(attempt);
+        return;
+      }
+      const token = ++requestToken.current;
+      beginAnalyzing(attempt);
+      await runAnalysis(attempt, token, resume);
+    } finally {
+      startingRef.current = false;
+    }
+  };
+
+  const handleManual = () => {
+    requestToken.current += 1;
+    attemptRef.current = null;
+    setRetryState(null);
+    setReconnecting(false);
+    setDraft(null);
+    setError(null);
+    setReceiptPath(null);
+    setReceiptData(null);
+    setInitialCategoryId(null);
+    setFlow('form');
+  };
+
+  const handleRetake = () => {
+    if (onRetake) onRetake();
+    else onClose();
+  };
+
+  const handleRetryPrimary = () => {
+    const attempt = attemptRef.current;
+    if (!attempt || !retryState || startingRef.current) return;
+    switch (retryState.kind) {
+      case 'enqueue':
+        void beginAttempt(attempt, false);
+        return;
+      case 'poll':
+        void beginAttempt(attempt, true);
+        return;
+      case 'timeout':
+        void beginAttempt(attempt, true);
+        return;
+      case 'failed':
+        attempt.requestId = createId();
+        attempt.jobId = undefined;
+        void beginAttempt(attempt, false);
+        return;
+      case 'rejected':
+        handleRetake();
+        return;
+    }
+  };
+
+  const handleRetrySecondary = () => {
+    const attempt = attemptRef.current;
+    if (!retryState || startingRef.current) return;
+    if (retryState.kind === 'timeout') {
+      if (!attempt) return;
+      attempt.requestId = createId();
+      attempt.jobId = undefined;
+      void beginAttempt(attempt, false);
+      return;
+    }
+    if (retryState.kind === 'failed') {
+      handleRetake();
+      return;
+    }
+    if (retryState.kind === 'rejected') {
+      handleManual();
+      return;
+    }
+    onClose();
+  };
 
   useEffect(() => {
     if (flow !== 'analyzing') {
@@ -80,74 +299,37 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   useEffect(() => {
     if (!visible) {
       requestToken.current += 1;
-      setFlow('chooser');
+      startKey.current = null;
+      startingRef.current = false;
+      attemptRef.current = null;
+      setFlow('form');
       setDraft(null);
       setError(null);
       setReceiptPath(null);
       setReceiptData(null);
       setInitialCategoryId(null);
+      setRetryState(null);
+      setReconnecting(false);
     }
   }, [visible]);
 
-  const handlePicked = async (base64: string, mimeType: string) => {
-    const token = ++requestToken.current;
-    setFlow('analyzing');
-    setDraft(null);
-    setError(null);
-    setReceiptPath(null);
-    setReceiptData(null);
-
-    try {
-      const path = await uploadReceipt(base64, mimeType);
-      if (token !== requestToken.current) return;
-      setReceiptPath(path);
-    } catch (e) {
-      if (token !== requestToken.current) return;
-      setError(e instanceof Error ? e.message : 'Receipt upload failed.');
-      setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
-      setFlow('form');
-      return;
+  useEffect(() => {
+    if (!visible) return;
+    const key = initialImage ? 'image' : startManual ? 'manual' : null;
+    if (!key || startKey.current === key) return;
+    startKey.current = key;
+    if (initialImage) {
+      const attempt: AnalysisAttempt = {
+        captureId: createId(),
+        requestId: createId(),
+        image: initialImage,
+      };
+      attemptRef.current = attempt;
+      void beginAttempt(attempt, false);
+    } else {
+      handleManual();
     }
-
-    let autoCategorize = true;
-    try {
-      const profile = await getProfile();
-      autoCategorize = profile?.autoCategorize ?? true;
-      if (token !== requestToken.current) return;
-    } catch {
-      autoCategorize = true;
-    }
-    const categories = buildCategoryPayload(expenseCategories);
-    const shouldAutoCategorize = autoCategorize && categories.length > 0;
-
-    try {
-      const { draft: result, raw } = await analyzeReceipt(base64, mimeType, {
-        autoCategorize: shouldAutoCategorize,
-        categories: shouldAutoCategorize ? categories : [],
-      });
-      if (token !== requestToken.current) return;
-      setDraft(result);
-      setReceiptData(raw);
-      setInitialCategoryId(selectInitialCategoryId(result, expenseCategories) ?? null);
-      setError(null);
-      setFlow('form');
-    } catch (e) {
-      if (token !== requestToken.current) return;
-      setError(formatAnalysisError(e));
-      setDraft(null);
-      setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
-      setFlow('form');
-    }
-  };
-
-  const handleManual = () => {
-    setDraft(null);
-    setError(null);
-    setReceiptPath(null);
-    setReceiptData(null);
-    setInitialCategoryId(null);
-    setFlow('form');
-  };
+  }, [visible, initialImage, startManual]);
 
   const handleSubmit = async (input: Omit<Transaction, 'id'>) => {
     try {
@@ -161,18 +343,6 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     }
   };
 
-  const renderHeader = (title: string, subtitle?: string) => (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      </View>
-      <Pressable style={styles.closeButton} onPress={onClose}>
-        <Icon name="close" size={20} color={colors.mutedForeground} />
-      </Pressable>
-    </View>
-  );
-
   return (
     <BottomSheet
       visible={visible}
@@ -185,42 +355,6 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
         style={flow === 'form' ? styles.stepFill : undefined}
         entering={FadeIn.duration(motion.duration.selection)}
       >
-      {flow === 'chooser' && (
-        <View style={styles.body}>
-          {renderHeader('Add Transaction', 'How would you like to add it?')}
-          <Pressable style={styles.optionButton} onPress={() => setFlow('capture')}>
-            <View style={styles.optionIcon}>
-              <Icon name="camera" size={22} color={colors.primary} />
-            </View>
-            <View style={styles.optionTextWrap}>
-              <Text style={styles.optionTitle}>Scan receipt</Text>
-              <Text style={styles.optionSubtitle}>Use AI to fill in the details</Text>
-            </View>
-            <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
-          </Pressable>
-          <Pressable style={styles.optionButton} onPress={handleManual}>
-            <View style={styles.optionIcon}>
-              <Icon name="pencil" size={22} color={colors.primary} />
-            </View>
-            <View style={styles.optionTextWrap}>
-              <Text style={styles.optionTitle}>Enter manually</Text>
-              <Text style={styles.optionSubtitle}>Type the details yourself</Text>
-            </View>
-            <Icon name="chevron-right" size={22} color={colors.mutedForeground} />
-          </Pressable>
-        </View>
-      )}
-
-      {flow === 'capture' && (
-        <View style={styles.body}>
-          {renderHeader('Scan Receipt', 'Take a photo or choose from your library')}
-          <ReceiptImagePicker
-            onPicked={handlePicked}
-            onCancel={() => setFlow('chooser')}
-          />
-        </View>
-      )}
-
       {flow === 'analyzing' && (
         <View style={styles.analyzingWrap}>
           <View style={styles.scanBox}>
@@ -241,6 +375,9 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
             />
           </View>
           <Text style={styles.analyzingText}>Reading receipt…</Text>
+          {reconnecting ? (
+            <Text style={styles.reconnectNote}>Connection lost — retrying…</Text>
+          ) : null}
           <Pressable style={styles.cancelButton} onPress={onClose}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
@@ -249,11 +386,19 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
 
       {flow === 'form' && (
         <View style={styles.formWrap}>
+          {retryState ? (
+            <AnalysisRetryBar
+              kind={retryState.kind}
+              onPrimary={handleRetryPrimary}
+              onSecondary={handleRetrySecondary}
+            />
+          ) : null}
           <TransactionForm
             initial={draft ?? undefined}
             initialCategoryId={initialCategoryId ?? undefined}
             receiptDate={draft?.date}
             error={error ?? undefined}
+            autoFocusName={startManual}
             onSubmit={handleSubmit}
             onCancel={onClose}
           />
@@ -265,66 +410,6 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontFamily: fonts.bold,
-    color: colors.foreground,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontFamily: fonts.medium,
-    marginTop: 2,
-  },
-  closeButton: {
-    padding: 6,
-    borderRadius: 16,
-    backgroundColor: colors.muted,
-  },
-  body: {
-    gap: 12,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  optionIcon: {
-    height: 42,
-    width: 42,
-    borderRadius: 21,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionTextWrap: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: fonts.semibold,
-    color: colors.foreground,
-  },
-  optionSubtitle: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontFamily: fonts.regular,
-    marginTop: 2,
-  },
   scanBox: {
     width: '100%',
     height: 120,
@@ -353,6 +438,11 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: fonts.semibold,
     color: colors.mutedForeground,
   },
+  reconnectNote: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
+  },
   cancelButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -367,12 +457,5 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   formWrap: {
     flex: 1,
-  },
-  errorText: {
-    fontSize: 13,
-    fontFamily: fonts.medium,
-    color: colors.expenseText,
-    marginBottom: 8,
-    textAlign: 'center',
   },
 });
