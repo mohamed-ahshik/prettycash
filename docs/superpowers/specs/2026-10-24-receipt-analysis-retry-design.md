@@ -16,7 +16,7 @@ tags:
 
 **Date:** 2026-10-24
 **Status:** Approved for implementation
-**Implementation status:** Implemented — backend migration applied and live idempotency verified; frontend service/UI wiring complete with 138 tests and `tsc` passing. Manual failure-mode QA from §9.3 is outstanding.
+**Implementation status:** Implemented — backend migration applied and live idempotency verified; frontend service/UI wiring complete with 139 tests and `tsc` passing. Web failure-mode QA covered poll loss, enqueue loss, forced job failure, and rejection; the timeout bar is covered by a component test. On-device background/close-sheet/retake QA remains.
 
 ---
 
@@ -346,11 +346,19 @@ create unique index if not exists receipt_jobs_request_id_key
 - Enqueue retry reuses the same key and does not re-upload when a receipt path exists.
 - Failed-job retry uses a new key and reuses the image.
 - Upload path uses the capture ID and `upsert: true`.
-- Existing tests and `tsc` pass. Current result: 24 suites / 138 tests with `npx tsc --noEmit` clean.
+- Existing tests and `tsc` pass. Current result: 25 suites / 139 tests with `npx tsc --noEmit` clean.
 
 ### 9.3 Manual QA
 
-Manual QA status: not yet run; requires a device or simulator with controllable network/backend.
+Manual web QA run on 2026-10-25:
+
+- **Pass** — network loss during polling showed “Lost connection”; Retry checking resumed the same job, and the database still had one job row.
+- **Pass** — API down during enqueue showed “Analysis didn't start”; Retry analysis created one job after the API returned.
+- **Pass** — a forced `failed` job showed “Couldn't read this receipt”; Try again created one new job and kept the failed row.
+- **Pass** — a blank image was rejected; the form showed Retake / Enter manually with no analysis retry.
+- **Pass** — live backend duplicate `Idempotency-Key` POSTs returned the same job ID.
+- **Covered by component test** — the timeout bar renders without closing the sheet. A browser tab kept hidden during the 2-minute window was discarded by the browser, so the visual timeout was not observed end-to-end.
+- **Pending on device** — background/foreground polling, closing the sheet mid-retry, and the Retake/Enter manually taps.
 
 | Case | Expected |
 |---|---|

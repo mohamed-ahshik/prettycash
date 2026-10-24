@@ -14,7 +14,7 @@ tags:
 
 # PrettyCash — Receipt Analysis Retry Implementation Plan
 
-**Implementation status:** Implemented — automated checks pass; manual failure-mode QA pending.
+**Implementation status:** Implemented — 139 tests and `tsc` pass; web QA covered poll loss, enqueue loss, forced failure, and rejection. Timeout UI is component-tested; on-device background/close/retake QA pending.
 
 ## Related
 
@@ -36,10 +36,10 @@ tags:
 - [x] Add `AnalysisRetryBar`.
 - [x] Refactor `AddTransactionSheet` to retain the attempt, job, and image.
 - [x] Wire retry/resume/start-over/retake/manual actions.
-- [x] Add service and storage tests.
+- [x] Add service, storage, and timeout component tests.
 - [x] Update the spec and plan implementation status.
 - [x] Run `tsc` and `npm test`.
-- [ ] Run manual failure-mode QA from the spec.
+- [ ] Finish on-device background/close-sheet/retake QA; web failure-mode QA passed for the covered cases.
 
 ## Verification
 
