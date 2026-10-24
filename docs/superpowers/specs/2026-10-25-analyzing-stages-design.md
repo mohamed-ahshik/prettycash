@@ -16,7 +16,7 @@ tags:
 
 **Date:** 2026-10-25
 **Status:** Approved
-**Implementation status:** Not started
+**Implementation status:** Implemented — three-stage progress, inline failure recovery, animated/reduced-motion progress, and 152 passing tests; `tsc` passes. Manual web/device QA pending.
 
 ---
 
@@ -25,7 +25,7 @@ tags:
 - Retry design: [[2026-10-24-receipt-analysis-retry-design|Receipt Analysis Retry and Idempotency]]
 - Split add design: [[2026-10-24-split-add-button-design|Split Add Button]]
 - Prototype reviewed: standalone `analyzing.html` (local design review, not committed)
-- Existing code: `src/components/AddTransactionSheet.tsx`, `src/components/AnalysisRetryBar.tsx`, `src/components/TabBar.tsx`
+- Existing code: `src/components/AddTransactionSheet.tsx`, `src/components/AnalysisProgress.tsx`, `src/components/AnalysisErrorCard.tsx`, `src/components/TabBar.tsx`
 
 ## 1. Overview & Objective
 
