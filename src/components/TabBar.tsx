@@ -73,6 +73,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [initialImage, setInitialImage] = useState<PickedReceiptImage | null>(null);
   const [startManual, setStartManual] = useState(false);
+  const [sheetKey, setSheetKey] = useState(0);
 
   const scan = async () => {
     split.clearError();
@@ -103,6 +104,12 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     setSheetVisible(false);
     setInitialImage(null);
     setStartManual(false);
+  };
+
+  const retake = () => {
+    closeSheet();
+    setSheetKey((key) => key + 1);
+    void scan();
   };
 
   const renderTab = (name: TabName) => {
@@ -153,10 +160,12 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
       {renderTab('Categories')}
       {renderTab('Profile')}
       <AddTransactionSheet
+        key={sheetKey}
         visible={sheetVisible}
         initialImage={initialImage}
         startManual={startManual}
         onClose={closeSheet}
+        onRetake={retake}
       />
       <PickerErrorSheet
         error={split.error}

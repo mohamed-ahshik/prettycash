@@ -3,6 +3,7 @@ import {
   formatAnalysisError,
   normalizeReceiptDraft,
   ReceiptAnalysisError,
+  resumeReceiptAnalysis,
 } from '../receiptAnalysis';
 
 const originalFetch = globalThis.fetch;
@@ -74,6 +75,122 @@ it('sends autoCategorize and categories when enabled', async () => {
   expect(body.categories).toEqual(categories);
 });
 
+it('sends the request id as the idempotency key and reports the job id', async () => {
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'completed', result: { amount: 1 } }) });
+  globalThis.fetch = fetchMock as any;
+  const onJobId = jest.fn();
+
+  await analyzeReceipt('b64', 'image/jpeg', { requestId: 'request-1', onJobId });
+
+  expect(fetchMock.mock.calls[0][1].headers['Idempotency-Key']).toBe('request-1');
+  expect(onJobId).toHaveBeenCalledWith('j1');
+});
+
+it('retries a transient poll failure against the same job', async () => {
+  jest.useFakeTimers();
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
+    .mockRejectedValueOnce(new Error('network'))
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: 'completed', result: { amount: 1 } }),
+    });
+  globalThis.fetch = fetchMock as any;
+  const onPollRetry = jest.fn();
+
+  const promise = analyzeReceipt('b64', 'image/jpeg', { onPollRetry });
+  await jest.advanceTimersByTimeAsync(1000);
+  const out = await promise;
+
+  expect(out.draft.amount).toBe(1);
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(fetchMock.mock.calls[2][0]).toBe('https://vision.test/jobs/j1');
+  expect(onPollRetry).toHaveBeenNthCalledWith(1, true);
+  expect(onPollRetry).toHaveBeenLastCalledWith(false);
+});
+
+it('retries a 5xx poll response before giving up', async () => {
+  jest.useFakeTimers();
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
+    .mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: { code: 'INTERNAL', message: 'busy' } }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: 'completed', result: { amount: 2 } }),
+    });
+  globalThis.fetch = fetchMock as any;
+
+  const promise = analyzeReceipt('b64', 'image/jpeg');
+  await jest.advanceTimersByTimeAsync(1000);
+  const out = await promise;
+
+  expect(out.draft.amount).toBe(2);
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});
+
+it('does not retry a 4xx poll response', async () => {
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
+    .mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { code: 'UNAUTHORIZED', message: 'unauthorized' } }),
+    });
+  globalThis.fetch = fetchMock as any;
+
+  await expect(analyzeReceipt('b64', 'image/jpeg')).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    jobId: 'j1',
+    phase: 'poll',
+    retryable: false,
+  });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it('surfaces a poll network error with the job id after retries', async () => {
+  jest.useFakeTimers();
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
+    .mockRejectedValue(new Error('network'));
+  globalThis.fetch = fetchMock as any;
+
+  const promise = analyzeReceipt('b64', 'image/jpeg');
+  const assertion = expect(promise).rejects.toMatchObject({
+    code: 'NETWORK',
+    jobId: 'j1',
+    phase: 'poll',
+    retryable: true,
+  });
+  await jest.advanceTimersByTimeAsync(1000);
+  await jest.advanceTimersByTimeAsync(2000);
+  await assertion;
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+});
+
+it('resumes an existing job without enqueueing', async () => {
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'completed', result: { amount: 2 } }) });
+  globalThis.fetch = fetchMock as any;
+
+  const out = await resumeReceiptAnalysis('j9');
+
+  expect(out.draft.amount).toBe(2);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls[0][0]).toBe('https://vision.test/jobs/j9');
+});
+
 it('sends autoCategorize false and omits categories when disabled or empty', async () => {
   const fetchMock = jest
     .fn()
@@ -127,6 +244,9 @@ it('rejects with FAILED when the job fails', async () => {
   await expect(analyzeReceipt('b64', 'image/jpeg')).rejects.toMatchObject({
     code: 'FAILED',
     message: 'bad image',
+    jobId: 'j2',
+    phase: 'poll',
+    retryable: false,
   });
 });
 
@@ -151,6 +271,8 @@ it('rejects immediately with NOT_A_RECEIPT when the job is rejected', async () =
   ).rejects.toMatchObject({
     code: 'NOT_A_RECEIPT',
     message: "This image doesn't look like a receipt or invoice.",
+    jobId: 'j4',
+    retryable: false,
   });
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
@@ -183,7 +305,12 @@ it('rejects with TIMEOUT after the poll limit', async () => {
     .mockResolvedValue({ ok: true, json: async () => ({ status: 'pending' }) }) as any;
 
   const promise = analyzeReceipt('b64', 'image/jpeg');
-  const assertion = expect(promise).rejects.toMatchObject({ code: 'TIMEOUT' });
+  const assertion = expect(promise).rejects.toMatchObject({
+    code: 'TIMEOUT',
+    jobId: 'j3',
+    phase: 'poll',
+    retryable: true,
+  });
   await jest.advanceTimersByTimeAsync(120 * 1000 + 1000);
   await assertion;
 });
