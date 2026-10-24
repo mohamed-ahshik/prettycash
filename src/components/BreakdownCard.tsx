@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
-import { colors, radii, shadows, text } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { radii, shadows, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { CategoryBreakdownItem } from '../types';
 import { BreakdownRow } from './BreakdownRow';
@@ -14,6 +16,8 @@ interface BreakdownCardProps {
 }
 
 export function BreakdownCard({ items, type, collapsible }: BreakdownCardProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(true);
   const title = type === 'expense' ? 'Expenses list' : 'Income list';
   const open = collapsible ? expanded : true;
@@ -48,7 +52,7 @@ export function BreakdownCard({ items, type, collapsible }: BreakdownCardProps) 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radii.lg,

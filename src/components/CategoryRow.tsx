@@ -1,20 +1,27 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts } from '../theme';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts } from '../theme';
+import type { ThemeColors } from '../theme';
 import { CategoryItem } from '../types';
+import { CategoryAvatar } from './CategoryAvatar';
 import { Icon } from './Icon';
 
 interface CategoryRowProps {
   item: CategoryItem;
   isFirst?: boolean;
+  onPress?: () => void;
 }
 
-export function CategoryRow({ item, isFirst = false }: CategoryRowProps) {
+export function CategoryRow({ item, isFirst = false, onPress }: CategoryRowProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   return (
-    <View style={[styles.row, !isFirst && styles.borderTop]}>
-      <View style={[styles.iconCircle, { backgroundColor: item.colorBg }]}>
-        <Icon name={item.icon} size={20} color={item.colorFg} />
-      </View>
+    <Pressable
+      style={({ pressed }) => [styles.row, !isFirst && styles.borderTop, pressed && styles.pressed]}
+      onPress={onPress}
+    >
+      <CategoryAvatar icon={item.icon} colorBg={item.colorBg} colorFg={item.colorFg} size={42} />
       <View style={styles.info}>
         <Text style={styles.name}>{item.name}</Text>
         {item.notes ? (
@@ -24,11 +31,11 @@ export function CategoryRow({ item, isFirst = false }: CategoryRowProps) {
         ) : null}
       </View>
       <Icon name="chevron-right" size={18} color={colors.mutedForeground} />
-    </View>
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -39,13 +46,6 @@ const styles = StyleSheet.create({
   borderTop: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  iconCircle: {
-    height: 42,
-    width: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   info: {
     flex: 1,
@@ -61,5 +61,8 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontFamily: fonts.regular,
     marginTop: 2,
+  },
+  pressed: {
+    opacity: 0.85,
   },
 });

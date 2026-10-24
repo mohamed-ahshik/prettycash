@@ -52,6 +52,42 @@ it('omits empty-string date and time', () => {
   expect(out.time).toBeUndefined();
 });
 
+it('normalizes category fields and ignores invalid types', () => {
+  expect(normalizeReceiptDraft({ amount: 1, categoryId: 'c1', categoryConfidence: 0.9 }))
+    .toMatchObject({ categoryId: 'c1', categoryConfidence: 0.9 });
+  expect(normalizeReceiptDraft({ amount: 1, categoryId: 2, categoryConfidence: 'x' }))
+    .toMatchObject({ categoryId: undefined, categoryConfidence: undefined });
+});
+
+it('sends autoCategorize and categories when enabled', async () => {
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'completed', result: { amount: 1 } }) });
+  globalThis.fetch = fetchMock as any;
+  const categories = [{ id: 'c1', name: 'Food', description: 'Groceries' }];
+
+  await analyzeReceipt('b64', 'image/jpeg', { autoCategorize: true, categories });
+
+  const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+  expect(body.autoCategorize).toBe(true);
+  expect(body.categories).toEqual(categories);
+});
+
+it('sends autoCategorize false and omits categories when disabled or empty', async () => {
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j1', status: 'pending' }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'completed', result: { amount: 1 } }) });
+  globalThis.fetch = fetchMock as any;
+
+  await analyzeReceipt('b64', 'image/jpeg', { autoCategorize: true, categories: [] });
+
+  const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+  expect(body.autoCategorize).toBe(false);
+  expect(body).not.toHaveProperty('categories');
+});
+
 it('formats an analysis error with message and code', () => {
   expect(formatAnalysisError(new ReceiptAnalysisError('TIMEOUT', 'Receipt analysis timed out.')))
     .toBe('Receipt analysis timed out. (TIMEOUT)');
@@ -92,6 +128,43 @@ it('rejects with FAILED when the job fails', async () => {
     code: 'FAILED',
     message: 'bad image',
   });
+});
+
+it('rejects immediately with NOT_A_RECEIPT when the job is rejected', async () => {
+  const fetchMock = jest
+    .fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ jobId: 'j4', status: 'pending' }) })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        status: 'rejected',
+        error: { code: 'NOT_A_RECEIPT', message: "This image doesn't look like a receipt or invoice." },
+      }),
+    });
+  globalThis.fetch = fetchMock as any;
+
+  await expect(
+    Promise.race([
+      analyzeReceipt('b64', 'image/jpeg'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('hung')), 100)),
+    ]),
+  ).rejects.toMatchObject({
+    code: 'NOT_A_RECEIPT',
+    message: "This image doesn't look like a receipt or invoice.",
+  });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it('times out a hung enqueue instead of waiting forever', async () => {
+  jest.useFakeTimers();
+  globalThis.fetch = jest.fn((_url: string, init: any) => new Promise((_, reject) => {
+    init.signal.addEventListener('abort', () => reject(new Error('Aborted')));
+  })) as any;
+
+  const promise = analyzeReceipt('b64', 'image/jpeg');
+  const assertion = expect(promise).rejects.toMatchObject({ code: 'NETWORK' });
+  await jest.advanceTimersByTimeAsync(60000 + 1);
+  await assertion;
 });
 
 it('rejects with NOT_CONFIGURED when env is missing', async () => {

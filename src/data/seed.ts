@@ -9,6 +9,7 @@ export const DEFAULT_EXPENSE_CATEGORIES: Omit<CategoryItem, 'id'>[] = [
   { name: 'Travel', type: 'expense', icon: 'car-outline', colorBg: '#E8EFFD', colorFg: '#3B5BDB', notes: 'Commute & transit' },
   { name: 'Fun', type: 'expense', icon: 'play', colorBg: '#FFEEE3', colorFg: '#E67E22', notes: 'Movies & subscriptions' },
   { name: 'Bills', type: 'expense', icon: 'file-document-outline', colorBg: '#F3E8FF', colorFg: '#7C3AED', notes: 'Utilities & rent' },
+  { name: 'Uncategorized', type: 'expense', icon: 'help-circle-outline', colorBg: '#F3F4F6', colorFg: '#6B7280', notes: 'Receipts with no clear category', isUncategorized: true },
 ];
 
 export const DEFAULT_INCOME_CATEGORIES: Omit<CategoryItem, 'id'>[] = [
@@ -19,15 +20,20 @@ export const DEFAULT_INCOME_CATEGORIES: Omit<CategoryItem, 'id'>[] = [
 ];
 
 export async function seedDefaultCategoriesIfNeeded(): Promise<boolean> {
-  const seeded = await isSeeded();
-  if (seeded) return false;
+  if (await isSeeded()) return false;
   const existing = await listCategories();
-  if (existing.length > 0) return false;
+  const hasUncategorized = existing.some((c) => c.isUncategorized);
   const all: Omit<CategoryItem, 'id'>[] = [
     ...DEFAULT_EXPENSE_CATEGORIES,
     ...DEFAULT_INCOME_CATEGORIES,
   ];
-  for (const cat of all) await insertCategory(cat);
+  let inserted = false;
+  for (const cat of all) {
+    if (cat.isUncategorized && hasUncategorized) continue;
+    if (existing.some((c) => c.type === cat.type && c.name === cat.name)) continue;
+    await insertCategory(cat);
+    inserted = true;
+  }
   await setSeeded(true);
-  return true;
+  return inserted;
 }

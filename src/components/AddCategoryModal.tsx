@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -7,8 +7,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { PRESET_CATEGORY_COLORS, PRESET_CATEGORY_ICONS } from '../data/categoriesData';
-import { colors, fonts, radii } from '../theme';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { CategoryItem, CategoryType } from '../types';
 import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
@@ -16,25 +18,41 @@ import { Icon } from './Icon';
 interface AddCategoryModalProps {
   visible: boolean;
   type: CategoryType;
+  initial?: CategoryItem;
   onClose: () => void;
   onSave: (item: Omit<CategoryItem, 'id'>) => void;
 }
 
-export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategoryModalProps) {
+export function AddCategoryModal({ visible, type, initial, onClose, onSave }: AddCategoryModalProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedIcon, setSelectedIcon] = useState(PRESET_CATEGORY_ICONS[0]);
   const [selectedColor, setSelectedColor] = useState(PRESET_CATEGORY_COLORS[0]);
+  const isEditing = Boolean(initial);
+
+  useEffect(() => {
+    if (!visible) return;
+    setName(initial?.name ?? '');
+    setNotes(initial?.notes ?? '');
+    setSelectedIcon(initial?.icon ?? PRESET_CATEGORY_ICONS[0]);
+    setSelectedColor(
+      initial
+        ? { bg: initial.colorBg, fg: initial.colorFg }
+        : PRESET_CATEGORY_COLORS[0],
+    );
+  }, [visible, initial]);
 
   const handleSave = () => {
     if (!name.trim()) return;
     onSave({
       name: name.trim(),
-      type,
+      type: initial?.type ?? type,
       notes: notes.trim() || undefined,
-      icon: selectedIcon,
-      colorBg: selectedColor.bg,
-      colorFg: selectedColor.fg,
+      icon: initial?.icon ?? selectedIcon,
+      colorBg: initial?.colorBg ?? selectedColor.bg,
+      colorFg: initial?.colorFg ?? selectedColor.fg,
     });
     setName('');
     setNotes('');
@@ -45,9 +63,11 @@ export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategory
     <BottomSheet visible={visible} onClose={onClose} maxHeight={0.85}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Add Category</Text>
+              <Text style={styles.title}>{isEditing ? 'Edit Category' : 'Add Category'}</Text>
               <Text style={styles.subtitle}>
-                Adding to {type === 'expense' ? 'Expense' : 'Income'}
+                {isEditing
+                  ? 'Update the name or description'
+                  : `Adding to ${type === 'expense' ? 'Expense' : 'Income'}`}
               </Text>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
@@ -63,63 +83,69 @@ export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategory
               placeholderTextColor={colors.mutedForeground}
               value={name}
               onChangeText={setName}
+              maxLength={80}
             />
 
-            <Text style={styles.fieldLabel}>Notes (optional)</Text>
+            <Text style={styles.fieldLabel}>Description (optional)</Text>
             <TextInput
               style={[styles.input, styles.multilineInput]}
-              placeholder="e.g. Monthly allocation or notes"
+              placeholder="What belongs here? e.g. Groceries, dining out"
               placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={3}
               value={notes}
               onChangeText={setNotes}
+              maxLength={200}
             />
 
-            <Text style={styles.fieldLabel}>Select Icon</Text>
-            <View style={styles.iconGrid}>
-              {PRESET_CATEGORY_ICONS.map((iconName) => {
-                const isSelected = selectedIcon === iconName;
-                return (
-                  <Pressable
-                    key={iconName}
-                    style={[
-                      styles.iconChip,
-                      isSelected && { borderColor: colors.primary, backgroundColor: colors.secondary },
-                    ]}
-                    onPress={() => setSelectedIcon(iconName)}
-                  >
-                    <Icon
-                      name={iconName}
-                      size={22}
-                      color={isSelected ? colors.primary : colors.mutedForeground}
-                    />
-                  </Pressable>
-                );
-              })}
-            </View>
+            {!isEditing ? (
+              <>
+                <Text style={styles.fieldLabel}>Select Icon</Text>
+                <View style={styles.iconGrid}>
+                  {PRESET_CATEGORY_ICONS.map((iconName) => {
+                    const isSelected = selectedIcon === iconName;
+                    return (
+                      <Pressable
+                        key={iconName}
+                        style={[
+                          styles.iconChip,
+                          isSelected && { borderColor: colors.primary, backgroundColor: colors.secondary },
+                        ]}
+                        onPress={() => setSelectedIcon(iconName)}
+                      >
+                        <Icon
+                          name={iconName}
+                          size={22}
+                          color={isSelected ? colors.primary : colors.mutedForeground}
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </View>
 
-            <Text style={styles.fieldLabel}>Select Color</Text>
-            <View style={styles.colorRow}>
-              {PRESET_CATEGORY_COLORS.map((colorPair, index) => {
-                const isSelected = selectedColor.bg === colorPair.bg;
-                return (
-                  <Pressable
-                    key={index}
-                    style={[
-                      styles.colorChip,
-                      { backgroundColor: colorPair.bg },
-                      isSelected && styles.colorChipSelected,
-                    ]}
-                    onPress={() => setSelectedColor(colorPair)}
-                  >
-                    {isSelected ? (
-                      <Icon name="check" size={16} color={colorPair.fg} />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </View>
+                <Text style={styles.fieldLabel}>Select Color</Text>
+                <View style={styles.colorRow}>
+                  {PRESET_CATEGORY_COLORS.map((colorPair, index) => {
+                    const isSelected = selectedColor.bg === colorPair.bg;
+                    return (
+                      <Pressable
+                        key={index}
+                        style={[
+                          styles.colorChip,
+                          { backgroundColor: colorPair.bg },
+                          isSelected && styles.colorChipSelected,
+                        ]}
+                        onPress={() => setSelectedColor(colorPair)}
+                      >
+                        {isSelected ? (
+                          <Icon name="check" size={16} color={colorPair.fg} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
           </ScrollView>
 
           <Pressable
@@ -127,13 +153,13 @@ export function AddCategoryModal({ visible, type, onClose, onSave }: AddCategory
             disabled={!name.trim()}
             onPress={handleSave}
           >
-            <Text style={styles.saveButtonText}>Save Category</Text>
+            <Text style={styles.saveButtonText}>{isEditing ? 'Save Changes' : 'Save Category'}</Text>
           </Pressable>
     </BottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

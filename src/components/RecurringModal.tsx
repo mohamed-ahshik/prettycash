@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { colors, fonts, radii } from '../theme';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { RecurringItem } from '../types';
 import { hapticSelection, hapticWarning } from '../lib/haptics';
 import { formatSignedAmount } from '../utils/format';
 import { AddRecurringModal } from './AddRecurringModal';
 import { BottomSheet } from './BottomSheet';
+import { CategoryAvatar } from './CategoryAvatar';
 import { Icon } from './Icon';
 
 interface RecurringModalProps {
@@ -26,6 +29,8 @@ export function RecurringModal({
   onAddItem,
   onDeleteItem,
 }: RecurringModalProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [filter, setFilter] = useState<'expense' | 'income'>('expense');
   const [activeOnly, setActiveOnly] = useState(true);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -111,9 +116,7 @@ export function RecurringModal({
               filteredItems.map((item, index) => (
                 <View key={item.id} style={[styles.itemBlock, index > 0 && styles.borderTop]}>
                   <View style={styles.itemRow}>
-                    <View style={[styles.iconBox, { backgroundColor: item.colorBg }]}>
-                      <Icon name={item.icon} size={20} color={item.colorFg} />
-                    </View>
+                    <CategoryAvatar icon={item.icon} colorBg={item.colorBg} colorFg={item.colorFg} size={40} />
                     <View style={styles.itemInfo}>
                       <Text style={styles.itemName}>{item.name}</Text>
                       <Text style={styles.itemSchedule}>Day {item.dayOfMonth} of month</Text>
@@ -174,7 +177,7 @@ export function RecurringModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -285,13 +288,6 @@ const styles = StyleSheet.create({
   borderTop: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   itemInfo: {
     flex: 1,

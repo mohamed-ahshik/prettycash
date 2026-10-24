@@ -3,11 +3,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
-import { colors, fonts, radii } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
+import { getErrorMessage } from '../utils/errorMessage';
 
 const SHOW_GOOGLE_SIGN_IN = false;
 
 export function LoginScreen() {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const { signInWithProvider } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'google' | 'facebook' | null>(null);
@@ -18,7 +23,11 @@ export function LoginScreen() {
     try {
       await signInWithProvider(provider);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      setError(
+        e && typeof e === 'object'
+          ? getErrorMessage(e)
+          : 'Something went wrong. Please try again.'
+      );
     } finally {
       setBusy(null);
     }
@@ -69,7 +78,7 @@ export function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

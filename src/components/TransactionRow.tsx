@@ -2,10 +2,12 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Transaction } from '../types';
 import { useCategories } from '../context/CategoriesContext';
-import { colors, fonts, text } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { useCurrency } from '../context/CurrencyContext';
 import { formatSignedAmount } from '../utils/format';
-import { Icon } from './Icon';
+import { CategoryAvatar } from './CategoryAvatar';
 
 interface TransactionRowProps {
   transaction: Transaction;
@@ -14,6 +16,8 @@ interface TransactionRowProps {
 }
 
 export function TransactionRow({ transaction, showDivider, onPress }: TransactionRowProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const { expenseCategories, incomeCategories } = useCategories();
   const { symbol, decimals } = useCurrency();
   const category = [...expenseCategories, ...incomeCategories].find((c) => c.id === transaction.categoryId);
@@ -32,9 +36,7 @@ export function TransactionRow({ transaction, showDivider, onPress }: Transactio
       ]}
       onPress={onPress}
     >
-      <View style={[styles.iconCircle, { backgroundColor: bg }]}>
-        <Icon name={iconName} size={20} color={fg} />
-      </View>
+      <CategoryAvatar icon={iconName} colorBg={bg} colorFg={fg} />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{transaction.name}</Text>
         <Text style={styles.meta}>{transaction.time} • {category?.name ?? 'Other'}</Text>
@@ -46,7 +48,7 @@ export function TransactionRow({ transaction, showDivider, onPress }: Transactio
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -60,13 +62,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
-  },
-  iconCircle: {
-    height: 40,
-    width: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   info: {
     flex: 1,

@@ -6,20 +6,26 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { colors, fonts, text } from '../theme';
+import { fonts, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { motion } from '../theme/motion';
 import { CategoryBreakdownItem } from '../types';
+import { deriveCategoryColors } from '../utils/categoryColors';
 import { formatCurrency } from '../utils/format';
-import { Icon } from './Icon';
+import { CategoryAvatar } from './CategoryAvatar';
 
 interface BreakdownRowProps {
   item: CategoryBreakdownItem;
 }
 
 export function BreakdownRow({ item }: BreakdownRowProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { isDark } = useTheme();
   const { symbol, decimals } = useCurrency();
   const progress = useSharedValue(0);
+  const derived = deriveCategoryColors(item.bgColor, item.color, isDark);
 
   useEffect(() => {
     progress.value = withTiming(Math.min(item.percentage, 100) / 100, {
@@ -34,10 +40,7 @@ export function BreakdownRow({ item }: BreakdownRowProps) {
 
   return (
     <View style={styles.container}>
-      {/* Icon badge */}
-      <View style={[styles.iconCircle, { backgroundColor: item.bgColor }]}>
-        <Icon name={item.icon} size={20} color={item.color} />
-      </View>
+      <CategoryAvatar icon={item.icon} colorBg={item.bgColor} colorFg={item.color} size={38} />
 
       {/* Main details and progress bar */}
       <View style={styles.rightContent}>
@@ -52,7 +55,7 @@ export function BreakdownRow({ item }: BreakdownRowProps) {
         {/* Proportion bar */}
         <View style={styles.progressTrack}>
           <Animated.View
-            style={[styles.progressBar, { backgroundColor: item.color }, barStyle]}
+            style={[styles.progressBar, { backgroundColor: derived.colorFg }, barStyle]}
           />
         </View>
       </View>
@@ -60,19 +63,12 @@ export function BreakdownRow({ item }: BreakdownRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   rightContent: {
     flex: 1,

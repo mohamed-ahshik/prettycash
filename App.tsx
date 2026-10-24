@@ -1,9 +1,10 @@
 import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import type { Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -14,6 +15,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CurrencyProvider, useCurrency } from './src/context/CurrencyContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { MonthProvider } from './src/context/MonthContext';
+import { ThemeProvider, useTheme, useThemedStyles } from './src/context/ThemeContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
@@ -24,7 +26,9 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { colors, fonts, radii } from './src/theme';
+import { fonts, radii } from './src/theme';
+import type { ThemeColors } from './src/theme';
+import { getErrorMessage } from './src/utils/errorMessage';
 
 const Tab = createBottomTabNavigator();
 
@@ -41,12 +45,14 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <CurrencyProvider>
-        <AuthProvider>
-          <Gate />
-        </AuthProvider>
-      </CurrencyProvider>
+    <GestureHandlerRootView style={rootStyles.root}>
+      <ThemeProvider>
+        <CurrencyProvider>
+          <AuthProvider>
+            <Gate />
+          </AuthProvider>
+        </CurrencyProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }
@@ -95,6 +101,7 @@ function Gate() {
 function Bootstrap({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { setCurrency } = useCurrency();
+  const { setPreference } = useTheme();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -109,6 +116,7 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
         const existing = await getProfile();
         setHapticsEnabled(existing?.hapticsEnabled ?? true);
         setCurrency(existing?.currency ?? 'USD ($)');
+        setPreference(existing?.themePreference ?? 'system');
         if (!existing && user) {
           const meta = user.user_metadata ?? {};
           const name = (meta.full_name as string) || (meta.name as string) || user.email || 'You';
@@ -121,19 +129,21 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
             currency: 'USD ($)',
             notificationsEnabled: true,
             hapticsEnabled: true,
+            themePreference: 'system',
+            autoCategorize: true,
           });
         }
         await seedDefaultCategoriesIfNeeded();
         if (!cancelled) setReady(true);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setError(getErrorMessage(e));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user, attempt, setCurrency]);
+  }, [user, attempt, setCurrency, setPreference]);
 
   if (error) {
     return <BootstrapError error={error} onRetry={() => setAttempt((a) => a + 1)} />;
@@ -147,6 +157,8 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
 }
 
 function BootstrapError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.errorWrap}>
       <Text style={styles.errorTitle}>Something went wrong</Text>
@@ -159,6 +171,8 @@ function BootstrapError({ error, onRetry }: { error: string; onRetry: () => void
 }
 
 function AuthError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.errorWrap}>
       <Text style={styles.errorTitle}>Sign-in unavailable</Text>
@@ -171,6 +185,9 @@ function AuthError({ error, onRetry }: { error: string; onRetry: () => void }) {
 }
 
 function Splash() {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
+
   return (
     <Animated.View style={styles.splash} entering={FadeIn.duration(320)}>
       <View style={styles.splashLogo}>
@@ -182,9 +199,27 @@ function Splash() {
 }
 
 function AppNavigator() {
+  const styles = useThemedStyles(makeStyles);
+  const { colors, isDark } = useTheme();
+  const navigationTheme: Theme = useMemo(
+    () => ({
+      ...(isDark ? DarkTheme : DefaultTheme),
+      colors: {
+        ...(isDark ? DarkTheme : DefaultTheme).colors,
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.card,
+        text: colors.foreground,
+        border: colors.border,
+        notification: colors.expenseText,
+      },
+    }),
+    [colors, isDark],
+  );
+
   const content = (
-    <NavigationContainer>
-      <StatusBar style="dark" />
+    <NavigationContainer theme={navigationTheme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Tab.Navigator
         tabBar={(props) => <TabBar {...props} />}
         screenOptions={{
@@ -211,10 +246,13 @@ function AppNavigator() {
   return content;
 }
 
-const styles = StyleSheet.create({
+const rootStyles = StyleSheet.create({
   root: {
     flex: 1,
   },
+});
+
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   splash: {
     flex: 1,
     alignItems: 'center',
@@ -265,7 +303,7 @@ const styles = StyleSheet.create({
   },
   webOuter: {
     flex: 1,
-    backgroundColor: '#EEF2F0',
+    backgroundColor: colors.canvas,
     alignItems: 'center',
     justifyContent: 'center',
   },

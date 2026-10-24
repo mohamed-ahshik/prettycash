@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, radii, shadows } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii, shadows } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { hapticSelection } from '../lib/haptics';
 import { AddTransactionSheet } from './AddTransactionSheet';
@@ -27,6 +29,7 @@ interface TabItemProps {
 }
 
 function TabItem({ label, icon, color, isFocused, onPress }: TabItemProps) {
+  const styles = useThemedStyles(makeStyles);
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -52,6 +55,8 @@ function TabItem({ label, icon, color, isFocused, onPress }: TabItemProps) {
 }
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const activeRoute = state.routes[state.index];
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -106,7 +111,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   wrapper: {
     position: 'absolute',
     left: 20,

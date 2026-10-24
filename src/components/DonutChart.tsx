@@ -2,13 +2,16 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { colors, fonts, radii, shadows, text } from '../theme';
+import { fonts, radii, shadows, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { combinedShares } from '../utils/aggregate';
+import { deriveCategoryColors } from '../utils/categoryColors';
 import { sectorPath, segmentAngles } from '../utils/donut';
 import { hapticSelection } from '../lib/haptics';
 import { formatCurrency } from '../utils/format';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { capBreakdown, TypeBreakdown } from '../utils/insights';
 import { Icon } from './Icon';
 
@@ -35,6 +38,8 @@ interface LegendEntry {
 }
 
 export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors, isDark } = useTheme();
   const { symbol, decimals } = useCurrency();
   const size = 160;
   const strokeWidth = 18;
@@ -45,7 +50,12 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
   const shares = combinedShares(expense.total, income.total);
   const isEmpty = expense.total === 0 && income.total === 0;
   const drilledItems =
-    drill === null ? [] : capBreakdown(drill === 'expense' ? expense.items : income.items);
+    drill === null
+      ? []
+      : capBreakdown(drill === 'expense' ? expense.items : income.items, colors).map((item) => {
+          const derived = deriveCategoryColors(item.bgColor, item.color, isDark);
+          return { ...item, color: derived.colorFg, bgColor: derived.colorBg };
+        });
 
   const handleDrill = (next: 'expense' | 'income' | null) => {
     hapticSelection();
@@ -174,7 +184,7 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, text } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { Icon } from './Icon';
 
 interface EmptyStateProps {
@@ -10,6 +12,9 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
+
   return (
     <View style={styles.wrap}>
       <View style={styles.circle}>
@@ -21,7 +26,7 @@ export function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   wrap: {
     alignItems: 'center',
     paddingVertical: 28,

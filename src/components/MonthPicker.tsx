@@ -1,6 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, fonts, radii } from '../theme';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { Icon } from './Icon';
 
 interface MonthPickerProps {
@@ -9,6 +11,9 @@ interface MonthPickerProps {
 }
 
 export function MonthPicker({ month, onPress }: MonthPickerProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
+
   return (
     <Pressable style={({ pressed }) => [styles.pill, pressed && styles.pressed]} onPress={onPress}>
       <Icon name="calendar" size={18} color={colors.primary} />
@@ -18,7 +23,7 @@ export function MonthPicker({ month, onPress }: MonthPickerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,27 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated as RNAnimated,
+  Easing as RNEasing,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { useCategories } from '../context/CategoriesContext';
 import { useMonth } from '../context/MonthContext';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { useTransactions } from '../context/TransactionsContext';
+import { getProfile } from '../data/repositories/profileRepo';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { hapticSuccess } from '../lib/haptics';
 import { analyzeReceipt, formatAnalysisError } from '../services/receiptAnalysis';
-import { colors, fonts, radii } from '../theme';
+import { fonts, radii } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { ReceiptDraft, Transaction } from '../types';
 import { monthYearFromDate } from '../utils/aggregate';
+import { buildCategoryPayload, selectInitialCategoryId } from '../utils/categorySelection';
 import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
 import { ReceiptImagePicker } from './ReceiptImagePicker';
@@ -35,29 +36,46 @@ interface AddTransactionSheetProps {
 type Flow = 'chooser' | 'capture' | 'analyzing' | 'form';
 
 export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetProps) {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const { addTransaction } = useTransactions();
+  const { expenseCategories } = useCategories();
   const { setMonth } = useMonth();
   const [flow, setFlow] = useState<Flow>('chooser');
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receiptPath, setReceiptPath] = useState<string | null>(null);
   const [receiptData, setReceiptData] = useState<unknown>(null);
+  const [initialCategoryId, setInitialCategoryId] = useState<string | null>(null);
   const requestToken = useRef(0);
-  const scan = useSharedValue(0);
-  const scanStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scan.value * 96 }],
-  }));
+  const scanAnim = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
-    if (flow === 'analyzing') {
-      scan.value = 0;
-      scan.value = withRepeat(
-        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }),
-        -1,
-        true,
-      );
+    if (flow !== 'analyzing') {
+      scanAnim.stopAnimation();
+      scanAnim.setValue(0);
+      return;
     }
-  }, [flow, scan]);
+    const useNativeDriver = Platform.OS !== 'web';
+    const loop = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(scanAnim, {
+          toValue: 1,
+          duration: 1400,
+          easing: RNEasing.inOut(RNEasing.quad),
+          useNativeDriver,
+        }),
+        RNAnimated.timing(scanAnim, {
+          toValue: 0,
+          duration: 1400,
+          easing: RNEasing.inOut(RNEasing.quad),
+          useNativeDriver,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [flow, scanAnim]);
 
   useEffect(() => {
     if (!visible) {
@@ -67,6 +85,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
       setError(null);
       setReceiptPath(null);
       setReceiptData(null);
+      setInitialCategoryId(null);
     }
   }, [visible]);
 
@@ -85,21 +104,38 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     } catch (e) {
       if (token !== requestToken.current) return;
       setError(e instanceof Error ? e.message : 'Receipt upload failed.');
+      setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
       setFlow('form');
       return;
     }
 
+    let autoCategorize = true;
     try {
-      const { draft: result, raw } = await analyzeReceipt(base64, mimeType);
+      const profile = await getProfile();
+      autoCategorize = profile?.autoCategorize ?? true;
+      if (token !== requestToken.current) return;
+    } catch {
+      autoCategorize = true;
+    }
+    const categories = buildCategoryPayload(expenseCategories);
+    const shouldAutoCategorize = autoCategorize && categories.length > 0;
+
+    try {
+      const { draft: result, raw } = await analyzeReceipt(base64, mimeType, {
+        autoCategorize: shouldAutoCategorize,
+        categories: shouldAutoCategorize ? categories : [],
+      });
       if (token !== requestToken.current) return;
       setDraft(result);
       setReceiptData(raw);
+      setInitialCategoryId(selectInitialCategoryId(result, expenseCategories) ?? null);
       setError(null);
       setFlow('form');
     } catch (e) {
       if (token !== requestToken.current) return;
       setError(formatAnalysisError(e));
       setDraft(null);
+      setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
       setFlow('form');
     }
   };
@@ -109,6 +145,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setError(null);
     setReceiptPath(null);
     setReceiptData(null);
+    setInitialCategoryId(null);
     setFlow('form');
   };
 
@@ -187,7 +224,21 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
       {flow === 'analyzing' && (
         <View style={styles.analyzingWrap}>
           <View style={styles.scanBox}>
-            <Animated.View style={[styles.scanLine, scanStyle]} />
+            <RNAnimated.View
+              style={[
+                styles.scanLine,
+                {
+                  transform: [
+                    {
+                      translateY: scanAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 96],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
           </View>
           <Text style={styles.analyzingText}>Reading receipt…</Text>
           <Pressable style={styles.cancelButton} onPress={onClose}>
@@ -200,6 +251,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
         <View style={styles.formWrap}>
           <TransactionForm
             initial={draft ?? undefined}
+            initialCategoryId={initialCategoryId ?? undefined}
             receiptDate={draft?.date}
             error={error ?? undefined}
             onSubmit={handleSubmit}
@@ -212,7 +264,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

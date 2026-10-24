@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-20
 **Status:** Approved for implementation
-**Implementation status:** Not started
+**Implementation status:** Implemented — passed two senior reviews (visual + architecture) and a final whole-branch review; all P0/P1 fixed and re-reviewed (fix commits `3c08875`, `682ad48`). The `theme_preference` migration was applied to the live Supabase project on 2026-10-21, and the Appearance segmented control sizing was fixed on 2026-10-22 (`flexBasis: 176`, no label truncation). Outstanding human step: run the on-device checklist. Deferred P2s: Appearance swatches preview stored pastels, dark Switch on-track low contrast, avatar boundary for dark presets, no derived-tint contrast test, no SegmentedControl regression test, dark-tinted shadows (spec out of scope), optimistic rapid-tap persist race.
 
 ---
 

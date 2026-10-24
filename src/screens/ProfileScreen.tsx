@@ -2,20 +2,34 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AboutModal } from '../components/AboutModal';
+import { AlertBanner } from '../components/AlertBanner';
 import { CurrencyPickerModal } from '../components/CurrencyPickerModal';
 import { Icon } from '../components/Icon';
 import { RecurringModal } from '../components/RecurringModal';
+import { SegmentedControl } from '../components/SegmentedControl';
+import type { SegmentedControlOption } from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
-import { colors, fonts, radii, shadows, text } from '../theme';
+import { fonts, radii, shadows, text } from '../theme';
+import type { ThemeColors, ThemePreference } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
+import { getErrorMessage } from '../utils/errorMessage';
+
+const APPEARANCE_OPTIONS: SegmentedControlOption<ThemePreference>[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 export function ProfileScreen() {
+  const styles = useThemedStyles(makeStyles);
   const { session } = useAuth();
   const { setCurrency } = useCurrency();
+  const { preference, setPreference, colors } = useTheme();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
@@ -43,7 +57,7 @@ export function ProfileScreen() {
       })
       .catch((e) => {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(getErrorMessage(e));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -60,7 +74,9 @@ export function ProfileScreen() {
     if (patch.currency !== undefined) setCurrency(patch.currency);
     const next = { ...profile, ...patch };
     setProfile(next);
-    upsertProfile(next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    upsertProfile(next)
+      .then(() => setError(null))
+      .catch((e) => setError(getErrorMessage(e)));
   };
 
   const handleToggleRecurring = (id: string) => {
@@ -70,7 +86,7 @@ export function ProfileScreen() {
     setRecurringItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, active: next } : it))
     );
-    setRecurringActive(id, next).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    setRecurringActive(id, next).catch((e) => setError(getErrorMessage(e)));
   };
 
   const handleAddRecurring = async (newItem: Omit<RecurringItem, 'id' | 'active'>) => {
@@ -78,7 +94,7 @@ export function ProfileScreen() {
       const created = await insertRecurring(newItem);
       setRecurringItems((prev) => [created, ...prev]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(getErrorMessage(e));
     }
   };
 
@@ -87,7 +103,7 @@ export function ProfileScreen() {
       await deleteRecurring(id);
       setRecurringItems((prev) => prev.filter((it) => it.id !== id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(getErrorMessage(e));
     }
   };
 
@@ -126,6 +142,8 @@ export function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {error ? <AlertBanner message={error} /> : null}
+
         <Text style={[text.title, styles.screenTitle]}>Profile</Text>
 
         {/* Hero Card */}
@@ -200,6 +218,45 @@ export function ProfileScreen() {
               thumbColor={profile.hapticsEnabled ? colors.primary : '#FFFFFF'}
             />
           </View>
+
+          <View style={[styles.settingItem, styles.borderTop]}>
+            <View style={styles.settingLeft}>
+              <Icon name="tag-multiple-outline" size={20} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>Auto-categorize receipts</Text>
+                <Text style={styles.settingHint}>
+                  Gemini picks one of your expense categories from the receipt.
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={profile.autoCategorize}
+              onValueChange={(val) => {
+                hapticSelection();
+                updateProfile({ autoCategorize: val });
+              }}
+              trackColor={{ false: colors.border, true: colors.secondary }}
+              thumbColor={profile.autoCategorize ? colors.primary : '#FFFFFF'}
+            />
+          </View>
+
+          <View style={[styles.settingItem, styles.borderTop]}>
+            <View style={styles.settingLeft}>
+              <Icon name="theme-light-dark" size={20} color={colors.primary} />
+              <Text style={styles.settingLabel}>Appearance</Text>
+            </View>
+            <View style={styles.appearanceControl}>
+              <SegmentedControl
+                selected={preference}
+                onSelect={(next) => {
+                  setPreference(next);
+                  updateProfile({ themePreference: next });
+                }}
+                options={APPEARANCE_OPTIONS}
+                style={styles.appearanceSegment}
+              />
+            </View>
+          </View>
         </View>
 
         {/* About Section */}
@@ -240,7 +297,7 @@ export function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -361,14 +418,26 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   settingLeft: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  settingText: {
+    flexShrink: 1,
   },
   settingLabel: {
     fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.foreground,
+  },
+  settingHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
+    marginTop: 2,
   },
   settingRight: {
     flexDirection: 'row',
@@ -380,6 +449,18 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: fonts.semibold,
     color: colors.mutedForeground,
+  },
+  appearanceControl: {
+    flexBasis: 176,
+    flexGrow: 0,
+    flexShrink: 1,
+    minWidth: 168,
+    maxWidth: 176,
+  },
+  appearanceSegment: {
+    marginTop: 0,
+    marginBottom: 0,
+    padding: 3,
   },
   pressed: {
     opacity: 0.85,

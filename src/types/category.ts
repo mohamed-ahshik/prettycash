@@ -8,6 +8,7 @@ export interface CategoryItem {
   colorBg: string;
   colorFg: string;
   notes?: string;
+  isUncategorized?: boolean;
 }
 
 export interface PresetColor {

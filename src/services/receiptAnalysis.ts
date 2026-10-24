@@ -15,6 +15,11 @@ export interface AnalyzedReceipt {
   raw: unknown;
 }
 
+export interface AnalyzeOptions {
+  autoCategorize?: boolean;
+  categories?: { id: string; name: string; description: string }[];
+}
+
 export function formatAnalysisError(e: unknown): string {
   return e instanceof ReceiptAnalysisError
     ? `${e.message} (${e.code})`
@@ -39,11 +44,31 @@ export function normalizeReceiptDraft(data: unknown): ReceiptDraft {
     time: typeof d.time === 'string' && d.time ? d.time : undefined,
     note: typeof d.note === 'string' ? d.note : '',
     items,
+    categoryId: typeof d.categoryId === 'string' ? d.categoryId : undefined,
+    categoryConfidence: typeof d.categoryConfidence === 'number'
+      ? d.categoryConfidence
+      : undefined,
   };
 }
 
 const POLL_INTERVAL_MS = 1000;
 const MAX_POLL_ATTEMPTS = 120;
+const ENQUEUE_TIMEOUT_MS = 60000;
+const POLL_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(
+  input: string,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function toError(res: Response): Promise<ReceiptAnalysisError> {
   let code = 'INTERNAL';
@@ -56,23 +81,33 @@ async function toError(res: Response): Promise<ReceiptAnalysisError> {
   return new ReceiptAnalysisError(code, message);
 }
 
-export async function analyzeReceipt(imageBase64: string, mimeType: string): Promise<AnalyzedReceipt> {
+export async function analyzeReceipt(
+  imageBase64: string,
+  mimeType: string,
+  options: AnalyzeOptions = {},
+): Promise<AnalyzedReceipt> {
   const { baseUrl, apiKey } = getVisionConfig();
   if (!baseUrl || !apiKey) {
     throw new ReceiptAnalysisError('NOT_CONFIGURED', 'Vision backend is not configured.');
   }
   const root = baseUrl.replace(/\/$/, '');
   const authHeader = { Authorization: `Bearer ${apiKey}` };
+  const shouldAutoCategorize = Boolean(options.autoCategorize && options.categories?.length);
+  const body: Record<string, unknown> = {
+    image: { base64: imageBase64, mimeType },
+    autoCategorize: shouldAutoCategorize,
+  };
+  if (shouldAutoCategorize) body.categories = options.categories;
 
   let enqueueRes: Response;
   try {
-    enqueueRes = await fetch(`${root}/analyze-receipt`, {
+    enqueueRes = await fetchWithTimeout(`${root}/analyze-receipt`, {
       method: 'POST',
       headers: { ...authHeader, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: { base64: imageBase64, mimeType } }),
-    });
+      body: JSON.stringify(body),
+    }, ENQUEUE_TIMEOUT_MS);
   } catch {
-    throw new ReceiptAnalysisError('NETWORK', 'Could not reach the vision backend.');
+    throw new ReceiptAnalysisError('NETWORK', `Could not reach the vision backend at ${root}.`);
   }
   if (!enqueueRes.ok) throw await toError(enqueueRes);
 
@@ -84,9 +119,9 @@ export async function analyzeReceipt(imageBase64: string, mimeType: string): Pro
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     let pollRes: Response;
     try {
-      pollRes = await fetch(`${root}/jobs/${jobId}`, { headers: authHeader });
+      pollRes = await fetchWithTimeout(`${root}/jobs/${jobId}`, { headers: authHeader }, POLL_TIMEOUT_MS);
     } catch {
-      throw new ReceiptAnalysisError('NETWORK', 'Could not reach the vision backend.');
+      throw new ReceiptAnalysisError('NETWORK', `Could not reach the vision backend at ${root}.`);
     }
     if (!pollRes.ok) throw await toError(pollRes);
 
@@ -96,6 +131,12 @@ export async function analyzeReceipt(imageBase64: string, mimeType: string): Pro
     }
     if (body?.status === 'failed') {
       throw new ReceiptAnalysisError('FAILED', body?.error?.message ?? 'Receipt analysis failed.');
+    }
+    if (body?.status === 'rejected') {
+      throw new ReceiptAnalysisError(
+        body?.error?.code ?? 'NOT_A_RECEIPT',
+        body?.error?.message ?? "This image doesn't look like a receipt or invoice.",
+      );
     }
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }

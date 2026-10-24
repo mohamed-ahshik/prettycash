@@ -2,7 +2,9 @@ import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { Transaction, TransactionGroup as TransactionGroupType } from '../types';
-import { colors, text } from '../theme';
+import { useThemedStyles } from '../context/ThemeContext';
+import { text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { TransactionRow } from './TransactionRow';
 
@@ -12,6 +14,8 @@ interface TransactionGroupProps {
 }
 
 export function TransactionGroup({ group, onPressTransaction }: TransactionGroupProps) {
+  const styles = useThemedStyles(makeStyles);
+
   if (group.transactions.length === 0) {
     return null;
   }
@@ -36,7 +40,7 @@ export function TransactionGroup({ group, onPressTransaction }: TransactionGroup
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     paddingTop: 20,
     paddingBottom: 6,

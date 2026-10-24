@@ -9,6 +9,7 @@ export function mapCategoryRow(row: any): CategoryItem {
     colorBg: row.color_bg ?? '#DFF0EB',
     colorFg: row.color_fg ?? '#00674F',
     notes: row.notes ?? undefined,
+    isUncategorized: row.is_uncategorized === true,
   };
 }
 
@@ -51,6 +52,11 @@ export function mapRecurringRow(row: any): RecurringItem {
 }
 
 export function mapProfileRow(row: any): UserProfile {
+  const themePreference =
+    row.theme_preference === 'light' || row.theme_preference === 'dark' || row.theme_preference === 'system'
+      ? row.theme_preference
+      : 'system';
+
   return {
     name: row.name ?? '',
     initial: (row.name ?? '?').charAt(0).toUpperCase(),
@@ -58,6 +64,8 @@ export function mapProfileRow(row: any): UserProfile {
     currency: row.currency ?? 'USD ($)',
     notificationsEnabled: row.notifications_enabled,
     hapticsEnabled: row.haptics_enabled,
+    themePreference,
+    autoCategorize: row.auto_categorize ?? true,
     memberSince: row.member_since ?? '',
   };
 }

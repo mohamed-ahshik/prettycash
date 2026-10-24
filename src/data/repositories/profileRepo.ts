@@ -19,6 +19,8 @@ export async function upsertProfile(profile: UserProfile): Promise<void> {
     currency: profile.currency,
     notifications_enabled: profile.notificationsEnabled,
     haptics_enabled: profile.hapticsEnabled,
+    theme_preference: profile.themePreference,
+    auto_categorize: profile.autoCategorize,
     member_since: profile.memberSince,
   }, { onConflict: 'user_id' });
   if (error) throw error;

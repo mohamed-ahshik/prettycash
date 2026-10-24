@@ -18,7 +18,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useReducedMotion } from 'react-native-reanimated';
-import { colors, radii, shadows } from '../theme';
+import { useThemedStyles } from '../context/ThemeContext';
+import { radii, shadows } from '../theme';
+import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -38,6 +40,7 @@ export function BottomSheet({
   maxHeight = 0.88,
   fill = false,
 }: BottomSheetProps) {
+  const styles = useThemedStyles(makeStyles);
   const reduceMotion = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
   const translateY = useSharedValue(SCREEN_HEIGHT);
@@ -121,7 +124,7 @@ export function BottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   root: {
     flex: 1,
     justifyContent: 'flex-end',

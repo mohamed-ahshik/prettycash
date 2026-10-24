@@ -9,13 +9,16 @@ import { MonthYearPickerModal } from '../components/MonthYearPickerModal';
 import { TransactionGroup } from '../components/TransactionGroup';
 import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
-import { colors, radii, shadows, text } from '../theme';
+import { useThemedStyles } from '../context/ThemeContext';
+import { radii, shadows, text } from '../theme';
+import type { ThemeColors } from '../theme';
 import { Transaction } from '../types';
 import { filterByMonth, monthBalance, monthTotals } from '../utils/aggregate';
 import { formatHeaderDate, MONTH_NAMES } from '../utils/format';
 import { groupTransactionsByDay } from '../utils/groupTransactions';
 
 export function HomeScreen() {
+  const styles = useThemedStyles(makeStyles);
   const { transactions } = useTransactions();
   const { month, year, setMonth } = useMonth();
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -81,7 +84,7 @@ export function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
