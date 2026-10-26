@@ -1,37 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated as RNAnimated,
-  Easing as RNEasing,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useCategories } from '../context/CategoriesContext';
 import { useMonth } from '../context/MonthContext';
-import { useThemedStyles } from '../context/ThemeContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { getProfile } from '../data/repositories/profileRepo';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { hapticSuccess } from '../lib/haptics';
 import {
   analyzeReceipt,
-  formatAnalysisError,
   ReceiptAnalysisError,
   resumeReceiptAnalysis,
 } from '../services/receiptAnalysis';
 import type { PickedReceiptImage } from '../services/receiptPicker';
-import { fonts, radii } from '../theme';
-import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
 import { ReceiptDraft, Transaction } from '../types';
 import { monthYearFromDate } from '../utils/aggregate';
 import { buildCategoryPayload, selectInitialCategoryId } from '../utils/categorySelection';
 import { createId } from '../utils/ids';
-import { AnalysisRetryBar } from './AnalysisRetryBar';
-import type { AnalysisRetryKind } from './AnalysisRetryBar';
+import { AnalysisErrorCard } from './AnalysisErrorCard';
+import type { AnalysisErrorAction, AnalysisErrorKind } from './AnalysisErrorCard';
+import { AnalysisProgress } from './AnalysisProgress';
+import type { AnalysisStage } from './AnalysisProgress';
 import { BottomSheet } from './BottomSheet';
 import { TransactionForm } from './TransactionForm';
 
@@ -41,21 +31,22 @@ interface AddTransactionSheetProps {
   startManual?: boolean;
   onClose: () => void;
   onRetake?: () => void;
+  onChoosePhoto?: () => void;
 }
 
-type Flow = 'analyzing' | 'form';
+type Flow = 'analyzing' | 'error' | 'form';
 
 interface AnalysisAttempt {
   captureId: string;
   requestId: string;
   jobId?: string;
+  jobStartedAt?: number;
   image: PickedReceiptImage;
   receiptPath?: string;
 }
 
-interface RetryState {
-  kind: AnalysisRetryKind;
-}
+const FINISHING_AFTER_MS = 6000;
+const SLOW_WAIT_AFTER_MS = 15000;
 
 export function AddTransactionSheet({
   visible,
@@ -63,8 +54,8 @@ export function AddTransactionSheet({
   startManual = false,
   onClose,
   onRetake,
+  onChoosePhoto,
 }: AddTransactionSheetProps) {
-  const styles = useThemedStyles(makeStyles);
   const { addTransaction } = useTransactions();
   const { expenseCategories } = useCategories();
   const { setMonth } = useMonth();
@@ -74,45 +65,83 @@ export function AddTransactionSheet({
   const [receiptPath, setReceiptPath] = useState<string | null>(null);
   const [receiptData, setReceiptData] = useState<unknown>(null);
   const [initialCategoryId, setInitialCategoryId] = useState<string | null>(null);
-  const [retryState, setRetryState] = useState<RetryState | null>(null);
+  const [stage, setStage] = useState<AnalysisStage>('sending');
+  const [slowWait, setSlowWait] = useState(false);
+  const [analysisErrorKind, setAnalysisErrorKind] = useState<AnalysisErrorKind | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
   const requestToken = useRef(0);
   const startKey = useRef<string | null>(null);
   const startingRef = useRef(false);
   const attemptRef = useRef<AnalysisAttempt | null>(null);
-  const scanAnim = useRef(new RNAnimated.Value(0)).current;
+  const timelineTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const beginAnalyzing = (attempt: AnalysisAttempt) => {
+  const clearTimelineTimers = () => {
+    timelineTimers.current.forEach((timer) => clearTimeout(timer));
+    timelineTimers.current = [];
+  };
+
+  const scheduleTimeline = (attempt: AnalysisAttempt) => {
+    if (attempt.jobStartedAt == null) return;
+    clearTimelineTimers();
+    const elapsed = Math.max(0, Date.now() - attempt.jobStartedAt);
+    setStage(elapsed >= FINISHING_AFTER_MS ? 'finishing' : 'reading');
+    setSlowWait(elapsed >= SLOW_WAIT_AFTER_MS);
+
+    const finishingIn = FINISHING_AFTER_MS - elapsed;
+    if (finishingIn > 0) {
+      timelineTimers.current.push(setTimeout(() => setStage('finishing'), finishingIn));
+    }
+    const slowWaitIn = SLOW_WAIT_AFTER_MS - elapsed;
+    if (slowWaitIn > 0) {
+      timelineTimers.current.push(setTimeout(() => setSlowWait(true), slowWaitIn));
+    }
+  };
+
+  const beginAnalyzing = (attempt: AnalysisAttempt, resume: boolean) => {
+    clearTimelineTimers();
     setFlow('analyzing');
     setDraft(null);
     setError(null);
     setReceiptData(null);
     setInitialCategoryId(null);
-    setRetryState(null);
+    setAnalysisErrorKind(null);
     setReconnecting(false);
     setReceiptPath(attempt.receiptPath ?? null);
+
+    if (resume) {
+      if (attempt.jobStartedAt == null) attempt.jobStartedAt = Date.now();
+      scheduleTimeline(attempt);
+    } else {
+      attempt.jobStartedAt = undefined;
+      setStage('sending');
+      setSlowWait(false);
+    }
   };
 
   const failAnalysis = (attempt: AnalysisAttempt, e: unknown) => {
     const analysisError = e instanceof ReceiptAnalysisError ? e : null;
     if (analysisError?.jobId) attempt.jobId = analysisError.jobId;
+    clearTimelineTimers();
     setReconnecting(false);
-    setError(formatAnalysisError(e));
     setDraft(null);
     setReceiptData(null);
-    setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
+    setInitialCategoryId(null);
+    setError(null);
+
+    let kind: AnalysisErrorKind;
     if (analysisError?.code === 'NOT_A_RECEIPT') {
-      setRetryState({ kind: 'rejected' });
+      kind = 'rejected';
     } else if (analysisError?.code === 'FAILED') {
-      setRetryState({ kind: 'failed' });
+      kind = 'failed';
     } else if (analysisError?.code === 'TIMEOUT' && analysisError.jobId) {
-      setRetryState({ kind: 'timeout' });
-    } else if (analysisError?.phase === 'poll' && analysisError.jobId) {
-      setRetryState({ kind: 'poll' });
+      kind = 'timeout';
+    } else if (analysisError?.phase === 'poll') {
+      kind = 'poll';
     } else {
-      setRetryState({ kind: 'enqueue' });
+      kind = 'enqueue';
     }
-    setFlow('form');
+    setAnalysisErrorKind(kind);
+    setFlow('error');
   };
 
   const runAnalysis = async (
@@ -149,17 +178,20 @@ export function AddTransactionSheet({
             autoCategorize: shouldAutoCategorize,
             categories: shouldAutoCategorize ? categories : [],
             onJobId: (jobId) => {
+              if (token !== requestToken.current) return;
               attempt.jobId = jobId;
+              if (attempt.jobStartedAt == null) attempt.jobStartedAt = Date.now();
+              scheduleTimeline(attempt);
             },
             onPollRetry,
           });
       if (token !== requestToken.current) return;
+      clearTimelineTimers();
       setReconnecting(false);
       setDraft(result.draft);
       setReceiptData(result.raw);
       setInitialCategoryId(selectInitialCategoryId(result.draft, expenseCategories) ?? null);
       setError(null);
-      setRetryState(null);
       setFlow('form');
     } catch (e) {
       if (token !== requestToken.current) return;
@@ -169,7 +201,7 @@ export function AddTransactionSheet({
 
   const runCapture = async (attempt: AnalysisAttempt) => {
     const token = ++requestToken.current;
-    beginAnalyzing(attempt);
+    beginAnalyzing(attempt, false);
     try {
       const path = await uploadReceipt(
         attempt.image.base64,
@@ -179,12 +211,16 @@ export function AddTransactionSheet({
       if (token !== requestToken.current) return;
       attempt.receiptPath = path;
       setReceiptPath(path);
-    } catch (e) {
+    } catch {
       if (token !== requestToken.current) return;
-      setError(e instanceof Error ? e.message : 'Receipt upload failed.');
-      setInitialCategoryId(selectInitialCategoryId(null, expenseCategories) ?? null);
-      setRetryState({ kind: 'enqueue' });
-      setFlow('form');
+      clearTimelineTimers();
+      setReconnecting(false);
+      setDraft(null);
+      setReceiptData(null);
+      setInitialCategoryId(null);
+      setError(null);
+      setAnalysisErrorKind('upload');
+      setFlow('error');
       return;
     }
     await runAnalysis(attempt, token, false);
@@ -199,7 +235,7 @@ export function AddTransactionSheet({
         return;
       }
       const token = ++requestToken.current;
-      beginAnalyzing(attempt);
+      beginAnalyzing(attempt, resume);
       await runAnalysis(attempt, token, resume);
     } finally {
       startingRef.current = false;
@@ -208,8 +244,11 @@ export function AddTransactionSheet({
 
   const handleManual = () => {
     requestToken.current += 1;
+    clearTimelineTimers();
     attemptRef.current = null;
-    setRetryState(null);
+    setAnalysisErrorKind(null);
+    setStage('sending');
+    setSlowWait(false);
     setReconnecting(false);
     setDraft(null);
     setError(null);
@@ -224,77 +263,46 @@ export function AddTransactionSheet({
     else onClose();
   };
 
-  const handleRetryPrimary = () => {
-    const attempt = attemptRef.current;
-    if (!attempt || !retryState || startingRef.current) return;
-    switch (retryState.kind) {
-      case 'enqueue':
-        void beginAttempt(attempt, false);
-        return;
-      case 'poll':
-        void beginAttempt(attempt, true);
-        return;
-      case 'timeout':
-        void beginAttempt(attempt, true);
-        return;
-      case 'failed':
-        attempt.requestId = createId();
-        attempt.jobId = undefined;
-        void beginAttempt(attempt, false);
-        return;
-      case 'rejected':
-        handleRetake();
-        return;
-    }
+  const handleChoosePhoto = () => {
+    if (onChoosePhoto) onChoosePhoto();
+    else onClose();
   };
 
-  const handleRetrySecondary = () => {
-    const attempt = attemptRef.current;
-    if (!retryState || startingRef.current) return;
-    if (retryState.kind === 'timeout') {
-      if (!attempt) return;
-      attempt.requestId = createId();
-      attempt.jobId = undefined;
-      void beginAttempt(attempt, false);
-      return;
-    }
-    if (retryState.kind === 'failed') {
+  const handleErrorAction = (action: AnalysisErrorAction) => {
+    if (action === 'scan-again') {
       handleRetake();
       return;
     }
-    if (retryState.kind === 'rejected') {
+    if (action === 'choose-photo') {
+      handleChoosePhoto();
+      return;
+    }
+    if (action === 'enter-manually') {
       handleManual();
       return;
     }
-    onClose();
-  };
 
-  useEffect(() => {
-    if (flow !== 'analyzing') {
-      scanAnim.stopAnimation();
-      scanAnim.setValue(0);
-      return;
+    const attempt = attemptRef.current;
+    if (!attempt || startingRef.current) return;
+
+    switch (action) {
+      case 'retry-upload':
+      case 'retry-analysis':
+        void beginAttempt(attempt, false);
+        return;
+      case 'retry-checking':
+      case 'keep-checking':
+        void beginAttempt(attempt, true);
+        return;
+      case 'start-over':
+      case 'try-again':
+        attempt.requestId = createId();
+        attempt.jobId = undefined;
+        attempt.jobStartedAt = undefined;
+        void beginAttempt(attempt, false);
+        return;
     }
-    const useNativeDriver = Platform.OS !== 'web';
-    const loop = RNAnimated.loop(
-      RNAnimated.sequence([
-        RNAnimated.timing(scanAnim, {
-          toValue: 1,
-          duration: 1400,
-          easing: RNEasing.inOut(RNEasing.quad),
-          useNativeDriver,
-        }),
-        RNAnimated.timing(scanAnim, {
-          toValue: 0,
-          duration: 1400,
-          easing: RNEasing.inOut(RNEasing.quad),
-          useNativeDriver,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [flow, scanAnim]);
+  };
 
   useEffect(() => {
     if (!visible) {
@@ -302,13 +310,16 @@ export function AddTransactionSheet({
       startKey.current = null;
       startingRef.current = false;
       attemptRef.current = null;
+      clearTimelineTimers();
       setFlow('form');
       setDraft(null);
       setError(null);
       setReceiptPath(null);
       setReceiptData(null);
       setInitialCategoryId(null);
-      setRetryState(null);
+      setStage('sending');
+      setSlowWait(false);
+      setAnalysisErrorKind(null);
       setReconnecting(false);
     }
   }, [visible]);
@@ -331,9 +342,17 @@ export function AddTransactionSheet({
     }
   }, [visible, initialImage, startManual]);
 
+  useEffect(() => {
+    return () => clearTimelineTimers();
+  }, []);
+
   const handleSubmit = async (input: Omit<Transaction, 'id'>) => {
     try {
-      await addTransaction({ ...input, receiptPath: receiptPath ?? undefined, receiptData: receiptData ?? undefined });
+      await addTransaction({
+        ...input,
+        receiptPath: receiptPath ?? undefined,
+        receiptData: receiptData ?? undefined,
+      });
       const { year, month } = monthYearFromDate(input.date);
       setMonth(month, year);
       hapticSuccess();
@@ -347,7 +366,7 @@ export function AddTransactionSheet({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      maxHeight={flow === 'form' ? 0.92 : 0.8}
+      maxHeight={flow === 'analyzing' ? 0.8 : 0.92}
       fill={flow === 'form'}
     >
       <Animated.View
@@ -355,105 +374,46 @@ export function AddTransactionSheet({
         style={flow === 'form' ? styles.stepFill : undefined}
         entering={FadeIn.duration(motion.duration.selection)}
       >
-      {flow === 'analyzing' && (
-        <View style={styles.analyzingWrap}>
-          <View style={styles.scanBox}>
-            <RNAnimated.View
-              style={[
-                styles.scanLine,
-                {
-                  transform: [
-                    {
-                      translateY: scanAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 96],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          </View>
-          <Text style={styles.analyzingText}>Reading receipt…</Text>
-          {reconnecting ? (
-            <Text style={styles.reconnectNote}>Connection lost — retrying…</Text>
-          ) : null}
-          <Pressable style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {flow === 'form' && (
-        <View style={styles.formWrap}>
-          {retryState ? (
-            <AnalysisRetryBar
-              kind={retryState.kind}
-              onPrimary={handleRetryPrimary}
-              onSecondary={handleRetrySecondary}
-            />
-          ) : null}
-          <TransactionForm
-            initial={draft ?? undefined}
-            initialCategoryId={initialCategoryId ?? undefined}
-            receiptDate={draft?.date}
-            error={error ?? undefined}
-            autoFocusName={startManual}
-            onSubmit={handleSubmit}
+        {flow === 'analyzing' && attemptRef.current ? (
+          <AnalysisProgress
+            image={attemptRef.current.image}
+            stage={stage}
+            slowWait={slowWait}
+            reconnecting={reconnecting}
             onCancel={onClose}
           />
-        </View>
-      )}
+        ) : null}
+
+        {flow === 'error' && analysisErrorKind && attemptRef.current ? (
+          <AnalysisErrorCard
+            kind={analysisErrorKind}
+            image={attemptRef.current.image}
+            onAction={handleErrorAction}
+            onClose={onClose}
+          />
+        ) : null}
+
+        {flow === 'form' ? (
+          <View style={styles.formWrap}>
+            <TransactionForm
+              initial={draft ?? undefined}
+              initialCategoryId={initialCategoryId ?? undefined}
+              receiptDate={draft?.date}
+              error={error ?? undefined}
+              autoFocusName={startManual}
+              onSubmit={handleSubmit}
+              onCancel={onClose}
+            />
+          </View>
+        ) : null}
       </Animated.View>
     </BottomSheet>
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  scanBox: {
-    width: '100%',
-    height: 120,
-    borderRadius: radii.md,
-    backgroundColor: colors.muted,
-    overflow: 'hidden',
-  },
-  scanLine: {
-    height: 2,
-    width: '100%',
-    backgroundColor: colors.primary,
-    opacity: 0.5,
-  },
+const styles = StyleSheet.create({
   stepFill: {
     flex: 1,
-  },
-  analyzingWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 16,
-  },
-  analyzingText: {
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: fonts.semibold,
-    color: colors.mutedForeground,
-  },
-  reconnectNote: {
-    fontSize: 12,
-    fontFamily: fonts.regular,
-    color: colors.mutedForeground,
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: radii.pill,
-    backgroundColor: colors.muted,
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: fonts.semibold,
-    color: colors.foreground,
   },
   formWrap: {
     flex: 1,

@@ -112,6 +112,12 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     void scan();
   };
 
+  const chooseAnother = () => {
+    closeSheet();
+    setSheetKey((key) => key + 1);
+    void gallery();
+  };
+
   const renderTab = (name: TabName) => {
     const route = state.routes.find((r) => r.name === name);
     if (!route) return null;
@@ -166,6 +172,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         startManual={startManual}
         onClose={closeSheet}
         onRetake={retake}
+        onChoosePhoto={chooseAnother}
       />
       <PickerErrorSheet
         error={split.error}

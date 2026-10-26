@@ -16,7 +16,7 @@ tags:
 
 **Date:** 2026-10-24
 **Status:** Approved for implementation
-**Implementation status:** Implemented — backend migration applied and live idempotency verified; frontend service/UI wiring complete with 138 tests and `tsc` passing. Manual failure-mode QA from §9.3 is outstanding.
+**Implementation status:** Implemented — backend migration applied and live idempotency verified; frontend service/UI wiring complete. The analyzing-screen failure/recovery UI is superseded by [[2026-10-25-analyzing-stages-design|Analyzing Stages and Failure Recovery]]; the service retry semantics remain. Manual failure-mode QA from §9.3 is outstanding.
 
 ---
 
