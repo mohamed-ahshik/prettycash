@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadBalanceHidden, saveBalanceHidden } from '../balanceVisibility';
+import { EXPENSE_MASK, INCOME_MASK, loadBalanceHidden, saveBalanceHidden } from '../balanceVisibility';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -14,4 +14,9 @@ it('round-trips the hidden flag', async () => {
   await expect(loadBalanceHidden()).resolves.toBe(true);
   await saveBalanceHidden(false);
   await expect(loadBalanceHidden()).resolves.toBe(false);
+});
+
+it('keeps the income and expense signs in the hidden masks', () => {
+  expect(INCOME_MASK).toBe('+••••');
+  expect(EXPENSE_MASK).toBe('-••••');
 });
