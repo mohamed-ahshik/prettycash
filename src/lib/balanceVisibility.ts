@@ -4,7 +4,7 @@ const KEY = 'prettycash:balanceHidden';
 
 export const BALANCE_MASK = '••••••';
 export const INCOME_MASK = '+••••';
-export const EXPENSE_MASK = '••••';
+export const EXPENSE_MASK = '-••••';
 
 export async function loadBalanceHidden(): Promise<boolean> {
   try {

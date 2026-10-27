@@ -105,7 +105,7 @@ export function BalanceCard({ total, income, expense }: BalanceCardProps) {
               ) : (
                 <AnimatedNumber
                   value={expense}
-              format={(v) => formatCurrency(v, symbol, decimals)}
+                  format={(v) => formatSignedAmount('expense', v, symbol, decimals)}
                   style={[text.bodyLg, text.money, styles.splitValue, styles.expenseValue]}
                 />
               )}
@@ -126,12 +126,13 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     overflow: 'hidden',
     ...shadows.e1,
   },
   topRow: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
   balanceLabelRow: {
     flexDirection: 'row',
@@ -142,7 +143,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.mutedForeground,
   },
   balanceValue: {
-    marginTop: 4,
+    marginTop: 1,
     color: colors.foreground,
   },
   split: {
@@ -150,7 +151,8 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderRadius: radii.md,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     backgroundColor: colors.muted,
   },
   splitItem: {
@@ -160,9 +162,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 10,
   },
   splitIcon: {
-    height: 40,
-    width: 40,
-    borderRadius: 20,
+    height: 28,
+    width: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -171,7 +173,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.mutedForeground,
   },
   splitValue: {
-    marginTop: 2,
+    marginTop: 0,
   },
   incomeValue: {
     color: colors.incomeText,
