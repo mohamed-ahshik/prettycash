@@ -14,6 +14,7 @@ import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
+import { posthog } from '../lib/posthog';
 import { fonts, radii, shadows, text } from '../theme';
 import type { ThemeColors, ThemePreference } from '../theme';
 import { RecurringItem, UserProfile } from '../types';
@@ -27,7 +28,7 @@ const APPEARANCE_OPTIONS: SegmentedControlOption<ThemePreference>[] = [
 
 export function ProfileScreen() {
   const styles = useThemedStyles(makeStyles);
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const { setCurrency } = useCurrency();
   const { preference, setPreference, colors } = useTheme();
 
@@ -86,13 +87,16 @@ export function ProfileScreen() {
     setRecurringItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, active: next } : it))
     );
-    setRecurringActive(id, next).catch((e) => setError(getErrorMessage(e)));
+    setRecurringActive(id, next)
+      .then(() => posthog?.capture('recurring_item_updated', { is_active: next }))
+      .catch((e) => setError(getErrorMessage(e)));
   };
 
   const handleAddRecurring = async (newItem: Omit<RecurringItem, 'id' | 'active'>) => {
     try {
       const created = await insertRecurring(newItem);
       setRecurringItems((prev) => [created, ...prev]);
+      posthog?.capture('recurring_item_created', { recurring_type: created.type });
     } catch (e) {
       setError(getErrorMessage(e));
     }
@@ -102,6 +106,15 @@ export function ProfileScreen() {
     try {
       await deleteRecurring(id);
       setRecurringItems((prev) => prev.filter((it) => it.id !== id));
+      posthog?.capture('recurring_item_deleted');
+    } catch (e) {
+      setError(getErrorMessage(e));
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
     } catch (e) {
       setError(getErrorMessage(e));
     }
@@ -274,6 +287,22 @@ export function ProfileScreen() {
           </View>
           <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
         </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.menuRow, styles.signOutRow, pressed && styles.pressed]}
+          onPress={() => {
+            void handleSignOut();
+          }}
+        >
+          <View style={[styles.menuIconBox, { backgroundColor: colors.dangerSurface }]}>
+            <Icon name="logout" size={20} color={colors.expenseText} />
+          </View>
+          <View style={styles.menuInfo}>
+            <Text style={[styles.menuTitle, styles.signOutTitle]}>Sign out</Text>
+            <Text style={styles.menuSubtitle}>Return to the sign-in screen</Text>
+          </View>
+          <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+        </Pressable>
       </ScrollView>
 
       <RecurringModal
@@ -382,6 +411,13 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  signOutRow: {
+    marginTop: -4,
+    borderColor: colors.dangerSurface,
+  },
+  signOutTitle: {
+    color: colors.expenseText,
   },
   menuInfo: {
     flex: 1,

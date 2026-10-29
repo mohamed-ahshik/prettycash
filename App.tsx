@@ -1,9 +1,10 @@
 import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import type { Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
+import { PostHogProvider } from 'posthog-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -20,6 +21,7 @@ import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
 import { setHapticsEnabled } from './src/lib/haptics';
+import { posthog } from './src/lib/posthog';
 import { CategoriesScreen } from './src/screens/CategoriesScreen';
 import { Icon } from './src/components/Icon';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -201,6 +203,7 @@ function Splash() {
 function AppNavigator() {
   const styles = useThemedStyles(makeStyles);
   const { colors, isDark } = useTheme();
+  const navigationRef = useNavigationContainerRef();
   const navigationTheme: Theme = useMemo(
     () => ({
       ...(isDark ? DarkTheme : DefaultTheme),
@@ -217,8 +220,8 @@ function AppNavigator() {
     [colors, isDark],
   );
 
-  const content = (
-    <NavigationContainer theme={navigationTheme}>
+  const navigator = (
+    <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Tab.Navigator
         tabBar={(props) => <TabBar {...props} />}
@@ -232,6 +235,31 @@ function AppNavigator() {
         <Tab.Screen name="Categories" component={CategoriesScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
+    </>
+  );
+
+  const trackScreen = () => {
+    const route = navigationRef.getCurrentRoute() as { name?: string } | undefined;
+    if (route?.name && posthog) posthog.screen(route.name);
+  };
+
+  const content = (
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navigationTheme}
+      onReady={trackScreen}
+      onStateChange={trackScreen}
+    >
+      {posthog ? (
+        <PostHogProvider
+          client={posthog}
+          autocapture={{ captureScreens: false, captureTouches: false }}
+        >
+          {navigator}
+        </PostHogProvider>
+      ) : (
+        navigator
+      )}
     </NavigationContainer>
   );
 

@@ -8,7 +8,7 @@ import { fonts, radii } from '../theme';
 import type { ThemeColors } from '../theme';
 import { getErrorMessage } from '../utils/errorMessage';
 
-const SHOW_GOOGLE_SIGN_IN = false;
+const SHOW_GOOGLE_SIGN_IN = true;
 
 export function LoginScreen() {
   const styles = useThemedStyles(makeStyles);

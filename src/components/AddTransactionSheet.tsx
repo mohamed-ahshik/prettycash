@@ -7,6 +7,7 @@ import { useTransactions } from '../context/TransactionsContext';
 import { getProfile } from '../data/repositories/profileRepo';
 import { uploadReceipt } from '../data/repositories/storageRepo';
 import { hapticSuccess } from '../lib/haptics';
+import { posthog } from '../lib/posthog';
 import {
   analyzeReceipt,
   ReceiptAnalysisError,
@@ -140,6 +141,7 @@ export function AddTransactionSheet({
     } else {
       kind = 'enqueue';
     }
+    posthog?.capture('receipt_analysis_failed', { failure_stage: kind });
     setAnalysisErrorKind(kind);
     setFlow('error');
   };
@@ -191,6 +193,10 @@ export function AddTransactionSheet({
       setDraft(result.draft);
       setReceiptData(result.raw);
       setInitialCategoryId(selectInitialCategoryId(result.draft, expenseCategories) ?? null);
+      posthog?.capture('receipt_analysis_completed', {
+        item_count: result.draft.items.length,
+        auto_categorization_enabled: shouldAutoCategorize,
+      });
       setError(null);
       setFlow('form');
     } catch (e) {
@@ -219,6 +225,7 @@ export function AddTransactionSheet({
       setReceiptData(null);
       setInitialCategoryId(null);
       setError(null);
+      posthog?.capture('receipt_analysis_failed', { failure_stage: 'upload' });
       setAnalysisErrorKind('upload');
       setFlow('error');
       return;

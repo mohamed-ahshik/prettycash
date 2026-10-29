@@ -1,5 +1,8 @@
 import { ReceiptDraft } from '../types';
 import { getVisionConfig } from '../config';
+import { posthog } from '../lib/posthog';
+import { posthogLogger } from '../lib/posthogLogger';
+import { createId } from '../utils/ids';
 
 export type ReceiptAnalysisPhase = 'enqueue' | 'poll';
 
@@ -74,6 +77,39 @@ const MAX_POLL_ATTEMPTS = 120;
 const ENQUEUE_TIMEOUT_MS = 60000;
 const POLL_TIMEOUT_MS = 15000;
 const POLL_RETRY_DELAYS_MS = [1000, 2000];
+
+function safeAiId(value: string): string {
+  return value.replace(/[^A-Za-z0-9\-_~.@()!':|]/g, '_');
+}
+
+function captureReceiptAnalysisGeneration(
+  analysisId: string,
+  startedAt: number,
+  succeeded: boolean,
+  error?: unknown,
+) {
+  const properties: Record<string, any> = {
+    $ai_trace_id: `receipt-analysis-${safeAiId(analysisId)}`,
+    $ai_session_id: `receipt-analysis-${safeAiId(analysisId)}`,
+    $ai_span_name: 'receipt_analysis',
+    $ai_model: 'receipt-analysis-backend',
+    $ai_provider: 'custom',
+    $ai_input: [{ role: 'user', content: 'Analyze a receipt image' }],
+    $ai_latency: (Date.now() - startedAt) / 1000,
+  };
+
+  if (succeeded) {
+    properties.$ai_output_choices = [
+      { role: 'assistant', content: 'Receipt analysis completed' },
+    ];
+  }
+  if (error) {
+    properties.$ai_is_error = true;
+    properties.$ai_error = error instanceof ReceiptAnalysisError ? error.code : 'UNKNOWN';
+  }
+
+  posthog?.capture('$ai_generation', properties);
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -224,7 +260,8 @@ export async function analyzeReceipt(
   mimeType: string,
   options: AnalyzeOptions = {},
 ): Promise<AnalyzedReceipt> {
-  const { root, authHeader } = visionConfig();
+  const analysisId = options.requestId ?? createId();
+  const startedAt = Date.now();
   const shouldAutoCategorize = Boolean(options.autoCategorize && options.categories?.length);
   const body: Record<string, unknown> = {
     image: { base64: imageBase64, mimeType },
@@ -232,53 +269,73 @@ export async function analyzeReceipt(
   };
   if (shouldAutoCategorize) body.categories = options.categories;
 
-  const headers: Record<string, string> = {
-    ...authHeader,
-    'Content-Type': 'application/json',
-  };
-  if (options.requestId) headers['Idempotency-Key'] = options.requestId;
+  posthogLogger.info('receipt_analysis_started', {
+    auto_categorization_enabled: shouldAutoCategorize,
+  });
 
-  let enqueueRes: Response;
   try {
-    enqueueRes = await fetchWithTimeout(`${root}/analyze-receipt`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    }, ENQUEUE_TIMEOUT_MS);
-  } catch {
-    throw new ReceiptAnalysisError(
-      'NETWORK',
-      `Could not reach the vision backend at ${root}.`,
-      { phase: 'enqueue', retryable: true },
-    );
-  }
-  if (!enqueueRes.ok) {
-    const error = await toError(enqueueRes);
-    error.phase = 'enqueue';
-    error.retryable = isTransientStatus(enqueueRes.status);
+    const { root, authHeader } = visionConfig();
+    const headers: Record<string, string> = {
+      ...authHeader,
+      'Content-Type': 'application/json',
+    };
+    if (options.requestId) headers['Idempotency-Key'] = options.requestId;
+
+    let enqueueRes: Response;
+    try {
+      enqueueRes = await fetchWithTimeout(`${root}/analyze-receipt`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      }, ENQUEUE_TIMEOUT_MS);
+    } catch {
+      throw new ReceiptAnalysisError(
+        'NETWORK',
+        `Could not reach the vision backend at ${root}.`,
+        { phase: 'enqueue', retryable: true },
+      );
+    }
+    if (!enqueueRes.ok) {
+      const error = await toError(enqueueRes);
+      error.phase = 'enqueue';
+      error.retryable = isTransientStatus(enqueueRes.status);
+      throw error;
+    }
+
+    let enqueueBody: any;
+    try {
+      enqueueBody = await enqueueRes.json();
+    } catch {
+      throw new ReceiptAnalysisError(
+        'INTERNAL',
+        'The vision backend returned an unreadable response.',
+        { phase: 'enqueue', retryable: true },
+      );
+    }
+    const { jobId } = enqueueBody ?? {};
+    if (!jobId) {
+      throw new ReceiptAnalysisError(
+        'INTERNAL',
+        'Vision backend did not return a job id.',
+        { phase: 'enqueue', retryable: true },
+      );
+    }
+    options.onJobId?.(jobId);
+    const result = await pollUntilDone(jobId, root, authHeader, options.onPollRetry);
+    posthogLogger.info('receipt_analysis_completed', {
+      auto_categorization_enabled: shouldAutoCategorize,
+      duration_ms: Date.now() - startedAt,
+    });
+    captureReceiptAnalysisGeneration(analysisId, startedAt, true);
+    return result;
+  } catch (error) {
+    posthogLogger.warn('receipt_analysis_failed', {
+      failure_phase: error instanceof ReceiptAnalysisError ? error.phase ?? 'unknown' : 'unknown',
+      retryable: error instanceof ReceiptAnalysisError ? Boolean(error.retryable) : false,
+    });
+    captureReceiptAnalysisGeneration(analysisId, startedAt, false, error);
     throw error;
   }
-
-  let enqueueBody: any;
-  try {
-    enqueueBody = await enqueueRes.json();
-  } catch {
-    throw new ReceiptAnalysisError(
-      'INTERNAL',
-      'The vision backend returned an unreadable response.',
-      { phase: 'enqueue', retryable: true },
-    );
-  }
-  const { jobId } = enqueueBody ?? {};
-  if (!jobId) {
-    throw new ReceiptAnalysisError(
-      'INTERNAL',
-      'Vision backend did not return a job id.',
-      { phase: 'enqueue', retryable: true },
-    );
-  }
-  options.onJobId?.(jobId);
-  return pollUntilDone(jobId, root, authHeader, options.onPollRetry);
 }
 
 export async function resumeReceiptAnalysis(

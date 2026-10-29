@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { CategoryItem } from '../types';
 import { listCategories, insertCategory, updateCategory as repoUpdateCategory } from '../data/repositories/categoriesRepo';
+import { posthog } from '../lib/posthog';
 import { useAuth } from './AuthContext';
 
 interface CategoriesContextType {
@@ -54,6 +55,7 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
     } else {
       setIncomeCategories((prev) => [created, ...prev]);
     }
+    posthog?.capture('category_created', { category_type: created.type });
   };
 
   const updateCategory = async (id: string, patch: Pick<CategoryItem, 'name' | 'notes'>) => {
@@ -63,6 +65,7 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
     } else {
       setIncomeCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
     }
+    posthog?.capture('category_updated', { category_type: updated.type });
   };
 
   return (
