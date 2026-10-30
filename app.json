@@ -35,7 +35,14 @@
           "microphonePermission": false
         }
       ],
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ba033785-1921-4ce0-922e-d5c16f943f81"
+      }
+    },
+    "owner": "mohamed-ahshik"
   }
 }

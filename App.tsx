@@ -61,6 +61,7 @@ export default function App() {
 
 function Gate() {
   const { session, loading, authError, retrySession } = useAuth();
+  const styles = useThemedStyles(makeStyles);
 
   if (loading) {
     return <Splash />;
@@ -68,11 +69,19 @@ function Gate() {
 
   if (!session) {
     if (SHOW_AUTH_UI) {
-      return (
+      const login = (
         <SafeAreaProvider>
           <LoginScreen />
         </SafeAreaProvider>
       );
+      if (Platform.OS === 'web') {
+        return (
+          <View style={styles.webOuter}>
+            <View style={styles.phoneFrame}>{login}</View>
+          </View>
+        );
+      }
+      return login;
     }
     return (
       <AuthError

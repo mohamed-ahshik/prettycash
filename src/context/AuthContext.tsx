@@ -1,10 +1,11 @@
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { posthog } from '../lib/posthog';
 import { supabase } from '../lib/supabase';
+import { signInWithGoogleNative } from '../services/googleAuth';
 import { resolveInitialSession } from './session';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -16,6 +17,7 @@ interface AuthContextType {
   authError: string | null;
   retrySession: () => Promise<void>;
   signInWithProvider: (provider: 'google' | 'facebook') => Promise<void>;
+  signInWithEmailOtp: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -76,6 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [retrySession, syncPostHogIdentity]);
 
   const signInWithProvider = async (provider: 'google' | 'facebook') => {
+    if (provider === 'google' && Platform.OS !== 'web') {
+      await signInWithGoogleNative();
+      return;
+    }
+
     if (Platform.OS === 'web') {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -84,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       return;
     }
-    const redirectTo = makeRedirectUri();
+    const redirectTo = makeRedirectUri({ scheme: 'prettycash', path: 'auth/callback' });
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo, skipBrowserRedirect: true },
@@ -102,13 +109,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithEmailOtp = async (email: string) => {
+    const redirectTo =
+      Platform.OS === 'web'
+        ? window.location.origin
+        : makeRedirectUri({ scheme: 'prettycash', path: 'auth/callback' });
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: { shouldCreateUser: true, emailRedirectTo: redirectTo },
+    });
+    if (error) throw error;
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    const handleUrl = async (url: string) => {
+      if (!url) return;
+      try {
+        const parsed = new URL(url);
+        const params = new URLSearchParams(parsed.hash.replace(/^#/, '') || parsed.search);
+        const errorDescription = params.get('error_description') ?? params.get('error');
+        if (errorDescription) {
+          if (active) setAuthError(errorDescription);
+          return;
+        }
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error && active) setAuthError(error.message);
+          return;
+        }
+        const code = params.get('code');
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error && active) setAuthError(error.message);
+        }
+      } catch (e) {
+        if (active) setAuthError(e instanceof Error ? e.message : String(e));
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void handleUrl(url);
+    });
+    void Linking.getInitialURL().then((url) => {
+      if (url) void handleUrl(url);
+    });
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, loading, authError, signInWithProvider, signOut, retrySession }}
+      value={{
+        session,
+        user: session?.user ?? null,
+        loading,
+        authError,
+        signInWithProvider,
+        signInWithEmailOtp,
+        signOut,
+        retrySession,
+      }}
     >
       {children}
     </AuthContext.Provider>
