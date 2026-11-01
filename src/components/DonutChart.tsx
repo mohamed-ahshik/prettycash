@@ -103,8 +103,13 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
       : formatCurrency(net, symbol, decimals)
     : formatCurrency(drill === 'expense' ? expense.total : income.total, symbol, decimals);
 
-  const angles = segmentAngles(arcs.map((arc) => ({ key: arc.key, percentage: arc.percentage })));
+  const visibleArcs = arcs.filter((arc) => arc.percentage > 0);
+  const angles = segmentAngles(
+    visibleArcs.map((arc) => ({ key: arc.key, percentage: arc.percentage })),
+  );
   const stacked = legend.length > 4;
+  const showEmptyRing = visibleArcs.length === 0;
+  const fullRing = visibleArcs.length === 1 ? visibleArcs[0] : null;
 
   return (
     <View style={[styles.card, stacked && styles.cardStacked]}>
@@ -114,17 +119,27 @@ export function DonutChart({ expense, income, drill, onDrill }: DonutChartProps)
           entering={FadeIn.duration(motion.duration.selection)}
         >
           <Svg width={size} height={size}>
-          {isEmpty ? (
+          {showEmptyRing ? (
             <Circle
               cx={center}
               cy={center}
               r={radius}
-              stroke={colors.muted}
+              stroke={colors.border}
               strokeWidth={strokeWidth}
               fill="transparent"
             />
+          ) : fullRing ? (
+            <Circle
+              cx={center}
+              cy={center}
+              r={radius}
+              stroke={fullRing.color}
+              strokeWidth={strokeWidth}
+              fill="transparent"
+              onPress={fullRing.onPress}
+            />
           ) : (
-            arcs.map((arc, index) => (
+            visibleArcs.map((arc, index) => (
               <Path
                 key={arc.key}
                 d={sectorPath(center, center, inner, outer, angles[index].start, angles[index].end)}

@@ -26,6 +26,17 @@ export async function upsertProfile(profile: UserProfile): Promise<void> {
   if (error) throw error;
 }
 
+export async function updateProfileTimezone(timeZone: string): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error('not authenticated');
+  const { error } = await supabase
+    .from('profiles')
+    .update({ timezone: timeZone, timezone_updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 export async function isSeeded(): Promise<boolean> {
   const { data, error } = await supabase.from('profiles').select('seeded').maybeSingle();
   if (error) throw error;

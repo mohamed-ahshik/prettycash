@@ -7,8 +7,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useCategories } from '../context/CategoriesContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
-import { PRESET_CATEGORY_COLORS } from '../data/categoriesData';
 import { fonts, radii } from '../theme';
 import type { ThemeColors } from '../theme';
 import { RecurringItem } from '../types';
@@ -22,40 +22,41 @@ interface AddRecurringModalProps {
   onSave: (item: Omit<RecurringItem, 'id' | 'active'>) => void;
 }
 
-const CATEGORY_OPTIONS = [
-  { name: 'Bills', icon: 'file-document-outline', ...PRESET_CATEGORY_COLORS[5] },
-  { name: 'Food', icon: 'cart-outline', ...PRESET_CATEGORY_COLORS[0] },
-  { name: 'Fun', icon: 'play', ...PRESET_CATEGORY_COLORS[2] },
-  { name: 'Travel', icon: 'car-outline', ...PRESET_CATEGORY_COLORS[1] },
-  { name: 'Income', icon: 'briefcase-outline', ...PRESET_CATEGORY_COLORS[4] },
-];
-
 export function AddRecurringModal({ visible, initialType, onClose, onSave }: AddRecurringModalProps) {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  const { expenseCategories, incomeCategories } = useCategories();
   const [name, setName] = useState('');
   const [type, setType] = useState<'expense' | 'income'>(initialType ?? 'expense');
   const [amount, setAmount] = useState('');
   const [dayOfMonth, setDayOfMonth] = useState('1');
-  const [selectedCategory, setSelectedCategory] = useState(CATEGORY_OPTIONS[0]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const categories = type === 'expense' ? expenseCategories : incomeCategories;
 
   useEffect(() => {
     if (visible) setType(initialType ?? 'expense');
   }, [visible, initialType]);
 
+  useEffect(() => {
+    if (categories.some((category) => category.id === selectedCategoryId)) return;
+    setSelectedCategoryId(categories[0]?.id ?? null);
+  }, [categories, selectedCategoryId]);
+
   const handleSave = () => {
     const numAmount = parseFloat(amount);
     const day = parseInt(dayOfMonth, 10);
-    if (!name.trim() || isNaN(numAmount) || isNaN(day)) return;
+    const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
+    if (!name.trim() || isNaN(numAmount) || isNaN(day) || !selectedCategory) return;
 
     onSave({
       name: name.trim(),
       type,
       amount: numAmount,
       category: selectedCategory.name,
+      categoryId: selectedCategory.id,
       icon: selectedCategory.icon,
-      colorBg: selectedCategory.bg,
-      colorFg: selectedCategory.fg,
+      colorBg: selectedCategory.colorBg,
+      colorFg: selectedCategory.colorFg,
       dayOfMonth: Math.min(Math.max(day, 1), 31),
     });
 
@@ -126,16 +127,16 @@ export function AddRecurringModal({ visible, initialType, onClose, onSave }: Add
 
             <Text style={styles.fieldLabel}>Category</Text>
             <View style={styles.categoryRow}>
-              {CATEGORY_OPTIONS.map((cat) => {
-                const isSelected = selectedCategory.name === cat.name;
+              {categories.map((cat) => {
+                const isSelected = selectedCategoryId === cat.id;
                 return (
                   <Pressable
-                    key={cat.name}
+                    key={cat.id}
                     style={[
                       styles.categoryChip,
                       isSelected && { borderColor: colors.primary, backgroundColor: colors.secondary },
                     ]}
-                    onPress={() => setSelectedCategory(cat)}
+                    onPress={() => setSelectedCategoryId(cat.id)}
                   >
                     <Icon name={cat.icon} size={16} color={isSelected ? colors.primary : colors.mutedForeground} />
                     <Text style={[styles.categoryText, isSelected && { color: colors.primary, fontWeight: '700' }]}>
@@ -148,8 +149,11 @@ export function AddRecurringModal({ visible, initialType, onClose, onSave }: Add
           </ScrollView>
 
           <Pressable
-            style={[styles.saveButton, (!name.trim() || !amount.trim()) && styles.saveButtonDisabled]}
-            disabled={!name.trim() || !amount.trim()}
+            style={[
+              styles.saveButton,
+              (!name.trim() || !amount.trim() || categories.length === 0) && styles.saveButtonDisabled,
+            ]}
+            disabled={!name.trim() || !amount.trim() || categories.length === 0}
             onPress={handleSave}
           >
             <Text style={styles.saveButtonText}>Schedule Item</Text>

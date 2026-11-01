@@ -43,6 +43,7 @@ export function mapRecurringRow(row: any): RecurringItem {
     type: row.type,
     amount: Number(row.amount),
     category: row.category_name ?? '',
+    categoryId: row.category_id ?? undefined,
     icon: row.icon ?? 'calendar',
     colorBg: row.color_bg ?? '#F3E8FF',
     colorFg: row.color_fg ?? '#7C3AED',

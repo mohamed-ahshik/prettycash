@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-export const SHOW_AUTH_UI = false;
+export const SHOW_AUTH_UI = true;
 
 const PRIVATE_HOST = /^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 

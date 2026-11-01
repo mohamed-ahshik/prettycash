@@ -1,27 +1,32 @@
 import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import type { Theme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
+import { PostHogProvider } from 'posthog-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
+import { BrandMark } from './src/components/BrandMark';
 import { SHOW_AUTH_UI } from './src/config';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CurrencyProvider, useCurrency } from './src/context/CurrencyContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { MonthProvider } from './src/context/MonthContext';
+import { PendingRecurringProvider } from './src/context/PendingRecurringContext';
 import { ThemeProvider, useTheme, useThemedStyles } from './src/context/ThemeContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
-import { getProfile, upsertProfile } from './src/data/repositories/profileRepo';
+import { getProfile, upsertProfile, updateProfileTimezone } from './src/data/repositories/profileRepo';
 import { seedDefaultCategoriesIfNeeded } from './src/data/seed';
 import { setHapticsEnabled } from './src/lib/haptics';
+import { registerForPushNotifications } from './src/lib/notifications';
+import { posthog } from './src/lib/posthog';
+import { getDeviceTimeZone } from './src/lib/timezone';
 import { CategoriesScreen } from './src/screens/CategoriesScreen';
-import { Icon } from './src/components/Icon';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -59,6 +64,7 @@ export default function App() {
 
 function Gate() {
   const { session, loading, authError, retrySession } = useAuth();
+  const styles = useThemedStyles(makeStyles);
 
   if (loading) {
     return <Splash />;
@@ -66,11 +72,19 @@ function Gate() {
 
   if (!session) {
     if (SHOW_AUTH_UI) {
-      return (
+      const login = (
         <SafeAreaProvider>
           <LoginScreen />
         </SafeAreaProvider>
       );
+      if (Platform.OS === 'web') {
+        return (
+          <View style={styles.webOuter}>
+            <View style={styles.phoneFrame}>{login}</View>
+          </View>
+        );
+      }
+      return login;
     }
     return (
       <AuthError
@@ -88,9 +102,11 @@ function Gate() {
       <SafeAreaProvider>
         <CategoriesProvider>
           <TransactionsProvider>
-            <MonthProvider>
-              <AppNavigator />
-            </MonthProvider>
+            <PendingRecurringProvider>
+              <MonthProvider>
+                <AppNavigator />
+              </MonthProvider>
+            </PendingRecurringProvider>
           </TransactionsProvider>
         </CategoriesProvider>
       </SafeAreaProvider>
@@ -145,6 +161,25 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
     };
   }, [user, attempt, setCurrency, setPreference]);
 
+  useEffect(() => {
+    if (!user || !ready) return;
+
+    const sync = () => {
+      const timeZone = getDeviceTimeZone();
+      if (timeZone) {
+        void updateProfileTimezone(timeZone).catch(() => {});
+      }
+      void registerForPushNotifications().catch(() => {});
+    };
+
+    sync();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') sync();
+    });
+
+    return () => subscription.remove();
+  }, [user, ready]);
+
   if (error) {
     return <BootstrapError error={error} onRetry={() => setAttempt((a) => a + 1)} />;
   }
@@ -191,7 +226,7 @@ function Splash() {
   return (
     <Animated.View style={styles.splash} entering={FadeIn.duration(320)}>
       <View style={styles.splashLogo}>
-        <Icon name="cash-multiple" size={36} color={colors.primary} />
+        <BrandMark size={58} />
       </View>
       <ActivityIndicator size="small" color={colors.mutedForeground} />
     </Animated.View>
@@ -201,6 +236,7 @@ function Splash() {
 function AppNavigator() {
   const styles = useThemedStyles(makeStyles);
   const { colors, isDark } = useTheme();
+  const navigationRef = useNavigationContainerRef();
   const navigationTheme: Theme = useMemo(
     () => ({
       ...(isDark ? DarkTheme : DefaultTheme),
@@ -217,8 +253,8 @@ function AppNavigator() {
     [colors, isDark],
   );
 
-  const content = (
-    <NavigationContainer theme={navigationTheme}>
+  const navigator = (
+    <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Tab.Navigator
         tabBar={(props) => <TabBar {...props} />}
@@ -232,6 +268,31 @@ function AppNavigator() {
         <Tab.Screen name="Categories" component={CategoriesScreen} />
         <Tab.Screen name="Profile" component={ProfileScreen} />
       </Tab.Navigator>
+    </>
+  );
+
+  const trackScreen = () => {
+    const route = navigationRef.getCurrentRoute() as { name?: string } | undefined;
+    if (route?.name && posthog) posthog.screen(route.name);
+  };
+
+  const content = (
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navigationTheme}
+      onReady={trackScreen}
+      onStateChange={trackScreen}
+    >
+      {posthog ? (
+        <PostHogProvider
+          client={posthog}
+          autocapture={{ captureScreens: false, captureTouches: false }}
+        >
+          {navigator}
+        </PostHogProvider>
+      ) : (
+        navigator
+      )}
     </NavigationContainer>
   );
 
