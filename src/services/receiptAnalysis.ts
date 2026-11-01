@@ -1,8 +1,6 @@
 import { ReceiptDraft } from '../types';
 import { getVisionConfig } from '../config';
-import { posthog } from '../lib/posthog';
 import { posthogLogger } from '../lib/posthogLogger';
-import { createId } from '../utils/ids';
 
 export type ReceiptAnalysisPhase = 'enqueue' | 'poll';
 
@@ -77,39 +75,6 @@ const MAX_POLL_ATTEMPTS = 120;
 const ENQUEUE_TIMEOUT_MS = 60000;
 const POLL_TIMEOUT_MS = 15000;
 const POLL_RETRY_DELAYS_MS = [1000, 2000];
-
-function safeAiId(value: string): string {
-  return value.replace(/[^A-Za-z0-9\-_~.@()!':|]/g, '_');
-}
-
-function captureReceiptAnalysisGeneration(
-  analysisId: string,
-  startedAt: number,
-  succeeded: boolean,
-  error?: unknown,
-) {
-  const properties: Record<string, any> = {
-    $ai_trace_id: `receipt-analysis-${safeAiId(analysisId)}`,
-    $ai_session_id: `receipt-analysis-${safeAiId(analysisId)}`,
-    $ai_span_name: 'receipt_analysis',
-    $ai_model: 'receipt-analysis-backend',
-    $ai_provider: 'custom',
-    $ai_input: [{ role: 'user', content: 'Analyze a receipt image' }],
-    $ai_latency: (Date.now() - startedAt) / 1000,
-  };
-
-  if (succeeded) {
-    properties.$ai_output_choices = [
-      { role: 'assistant', content: 'Receipt analysis completed' },
-    ];
-  }
-  if (error) {
-    properties.$ai_is_error = true;
-    properties.$ai_error = error instanceof ReceiptAnalysisError ? error.code : 'UNKNOWN';
-  }
-
-  posthog?.capture('$ai_generation', properties);
-}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -260,7 +225,6 @@ export async function analyzeReceipt(
   mimeType: string,
   options: AnalyzeOptions = {},
 ): Promise<AnalyzedReceipt> {
-  const analysisId = options.requestId ?? createId();
   const startedAt = Date.now();
   const shouldAutoCategorize = Boolean(options.autoCategorize && options.categories?.length);
   const body: Record<string, unknown> = {
@@ -326,14 +290,12 @@ export async function analyzeReceipt(
       auto_categorization_enabled: shouldAutoCategorize,
       duration_ms: Date.now() - startedAt,
     });
-    captureReceiptAnalysisGeneration(analysisId, startedAt, true);
     return result;
   } catch (error) {
     posthogLogger.warn('receipt_analysis_failed', {
       failure_phase: error instanceof ReceiptAnalysisError ? error.phase ?? 'unknown' : 'unknown',
       retryable: error instanceof ReceiptAnalysisError ? Boolean(error.retryable) : false,
     });
-    captureReceiptAnalysisGeneration(analysisId, startedAt, false, error);
     throw error;
   }
 }
