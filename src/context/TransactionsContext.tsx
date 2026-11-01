@@ -16,6 +16,7 @@ interface TransactionsContextType {
   addTransaction: (input: Omit<Transaction, 'id'>) => Promise<void>;
   updateTransaction: (id: string, input: Omit<Transaction, 'id'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  refreshTransactions: () => Promise<void>;
   loading: boolean;
   error: string | null;
 }
@@ -79,11 +80,17 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     posthog?.capture('transaction_deleted');
   };
 
+  const refreshTransactions = async () => {
+    const txs = await listTransactions();
+    setTransactions(txs);
+    setError(null);
+  };
+
   const groups = useMemo(() => groupTransactionsByDay(transactions), [transactions]);
 
   return (
     <TransactionsContext.Provider
-      value={{ transactions, groups, addTransaction, updateTransaction, deleteTransaction, loading, error }}
+      value={{ transactions, groups, addTransaction, updateTransaction, deleteTransaction, refreshTransactions, loading, error }}
     >
       {children}
     </TransactionsContext.Provider>

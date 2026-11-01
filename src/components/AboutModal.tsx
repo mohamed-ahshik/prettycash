@@ -4,6 +4,7 @@ import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { fonts, radii } from '../theme';
 import type { ThemeColors } from '../theme';
 import { Icon } from './Icon';
+import { BrandMark } from './BrandMark';
 
 interface AboutModalProps {
   visible: boolean;
@@ -26,7 +27,7 @@ export function AboutModal({ visible, onClose }: AboutModalProps) {
 
           <View style={styles.badgeWrap}>
             <View style={styles.appIconCircle}>
-              <Icon name="cash-multiple" size={32} color={colors.primaryForeground} />
+              <BrandMark size={50} />
             </View>
             <Text style={styles.appName}>PrettyCash</Text>
             <Text style={styles.version}>Version 1.0.0 (Build 1)</Text>
@@ -85,7 +86,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,

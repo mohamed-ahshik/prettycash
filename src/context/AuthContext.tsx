@@ -5,6 +5,7 @@ import { Linking, Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { posthog } from '../lib/posthog';
 import { supabase } from '../lib/supabase';
+import { unregisterPushToken } from '../lib/notifications';
 import { signInWithGoogleNative } from '../services/googleAuth';
 import { resolveInitialSession } from './session';
 
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    await unregisterPushToken().catch(() => {});
     await supabase.auth.signOut();
   };
 

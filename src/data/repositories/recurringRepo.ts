@@ -11,6 +11,7 @@ export async function listRecurring(): Promise<RecurringItem[]> {
 export async function insertRecurring(input: Omit<RecurringItem, 'id' | 'active'>): Promise<RecurringItem> {
   const { data, error } = await supabase.from('recurring_items').insert({
     name: input.name, type: input.type, amount: input.amount, category_name: input.category,
+    category_id: input.categoryId ?? null,
     icon: input.icon, color_bg: input.colorBg, color_fg: input.colorFg, day_of_month: input.dayOfMonth, active: true,
   }).select().single();
   if (error) throw error;

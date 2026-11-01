@@ -14,11 +14,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     return name !== GOOGLE_PLUGIN;
   });
   const iosUrlScheme = getIosUrlScheme();
+  const googleServicesFile =
+    process.env.GOOGLE_SERVICES_FILE?.trim() || config.android?.googleServicesFile || './google-services.json';
 
   return {
     ...config,
     name: config.name ?? 'PrettyCash',
     slug: config.slug ?? 'prettycash',
+    android: {
+      ...(config.android ?? {}),
+      ...(googleServicesFile ? { googleServicesFile } : {}),
+    },
     plugins: [
       ...plugins,
       ...(iosUrlScheme

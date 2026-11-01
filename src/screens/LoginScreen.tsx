@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Icon } from '../components/Icon';
+import { BrandMark } from '../components/BrandMark';
 import { FacebookLogo, GoogleLogo } from '../components/SocialLogo';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
@@ -87,7 +87,7 @@ export function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.logo}>
-            <Icon name="cash-multiple" size={38} color={colors.primary} />
+            <BrandMark size={58} />
           </View>
           <Text style={styles.title}>Log in or sign up</Text>
 
