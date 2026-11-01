@@ -1,4 +1,4 @@
-import { resolveVisionBaseUrl } from '../config';
+import { resolveShowAuthUI, resolveVisionBaseUrl } from '../config';
 
 const STALE = 'http://192.168.85.188:8000/api/v1';
 const METRO = '192.168.0.5:8081';
@@ -27,4 +27,23 @@ it('uses the env URL in production', () => {
 it('handles a hostUri with a scheme', () => {
   expect(resolveVisionBaseUrl(STALE, 'exp://192.168.0.5:8081', true))
     .toBe('http://192.168.0.5:8000/api/v1');
+});
+
+describe('resolveShowAuthUI', () => {
+  it('hides the login screen when DEV_LOGIN_OFF is true', () => {
+    expect(resolveShowAuthUI(true)).toBe(false);
+    expect(resolveShowAuthUI('true')).toBe(false);
+    expect(resolveShowAuthUI('1')).toBe(false);
+  });
+
+  it('shows the login screen by default and for false values', () => {
+    expect(resolveShowAuthUI(undefined)).toBe(true);
+    expect(resolveShowAuthUI(false)).toBe(true);
+    expect(resolveShowAuthUI('false')).toBe(true);
+    expect(resolveShowAuthUI('0')).toBe(true);
+  });
+
+  it('never disables the login UI in production', () => {
+    expect(resolveShowAuthUI(true, false)).toBe(true);
+  });
 });

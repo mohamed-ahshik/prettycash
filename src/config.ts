@@ -1,6 +1,21 @@
 import Constants from 'expo-constants';
 
-export const SHOW_AUTH_UI = true;
+function isTruthy(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === 'true' || normalized === '1';
+}
+
+export function resolveShowAuthUI(value: unknown, isDev: boolean = __DEV__): boolean {
+  if (!isDev) return true;
+  return !isTruthy(value);
+}
+
+const extra = Constants.expoConfig?.extra as { devLoginOff?: unknown } | undefined;
+const configuredDevLoginOff = process.env.EXPO_PUBLIC_DEV_LOGIN_OFF ?? extra?.devLoginOff;
+
+export const SHOW_AUTH_UI = resolveShowAuthUI(configuredDevLoginOff);
 
 const PRIVATE_HOST = /^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 

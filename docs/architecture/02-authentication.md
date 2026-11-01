@@ -79,6 +79,18 @@ email → supabase.auth.signInWithOtp
 - Deep-link errors set `authError`.
 - Initial session failures surface through the bootstrap/auth error surface.
 
+## Development login bypass
+
+Set the following in the local `.env`:
+
+```text
+DEV_LOGIN_OFF=true
+```
+
+`app.config.ts` exposes this as `extra.devLoginOff`. On development builds (`__DEV__`), `src/config.ts` then sets `SHOW_AUTH_UI = false`, so `resolveInitialSession(false)` creates an anonymous Supabase session instead of showing `LoginScreen`.
+
+This is intentionally ignored in production builds. Anonymous sign-ins must be enabled in Supabase for this to work.
+
 ## Boundaries
 
 - Auth owns identity and session; it does not own profile fields beyond the initial creation call.
