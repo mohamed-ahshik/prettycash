@@ -16,11 +16,22 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const iosUrlScheme = getIosUrlScheme();
   const googleServicesFile =
     process.env.GOOGLE_SERVICES_FILE?.trim() || config.android?.googleServicesFile || './google-services.json';
+  const devLoginOffValue = (
+    process.env.DEV_LOGIN_OFF ??
+    process.env.dev_login_off ??
+    process.env.EXPO_PUBLIC_DEV_LOGIN_OFF ??
+    ''
+  ).trim().toLowerCase();
+  const devLoginOff = devLoginOffValue === 'true' || devLoginOffValue === '1';
 
   return {
     ...config,
     name: config.name ?? 'PrettyCash',
     slug: config.slug ?? 'prettycash',
+    extra: {
+      ...(config.extra ?? {}),
+      devLoginOff,
+    },
     android: {
       ...(config.android ?? {}),
       ...(googleServicesFile ? { googleServicesFile } : {}),

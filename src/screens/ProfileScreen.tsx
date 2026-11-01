@@ -164,10 +164,13 @@ export function ProfileScreen() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{profile.initial}</Text>
           </View>
-          <Text style={styles.userName}>{profile.name}</Text>
-          <Text style={styles.userSubtitle}>
-            {profile.email} • Member since {profile.memberSince}
+          <Text style={styles.userName} numberOfLines={1}>
+            {profile.name}
           </Text>
+          <Text style={styles.userEmail} numberOfLines={1} ellipsizeMode="middle">
+            {profile.email}
+          </Text>
+          <Text style={styles.userSubtitle}>Member since {profile.memberSince}</Text>
         </View>
 
         {/* Recurring Section */}
@@ -377,15 +380,27 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.primaryForeground,
   },
   userName: {
+    width: '100%',
     fontSize: 20,
     fontWeight: '700',
     fontFamily: fonts.bold,
     color: colors.foreground,
+    textAlign: 'center',
+    marginBottom: 4,
   },
-  userSubtitle: {
-    fontSize: 12,
+  userEmail: {
+    width: '100%',
+    fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.mutedForeground,
+    textAlign: 'center',
+  },
+  userSubtitle: {
+    width: '100%',
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.mutedForeground,
+    textAlign: 'center',
     marginTop: 4,
   },
   sectionHeading: {
