@@ -19,7 +19,21 @@ export const DEFAULT_INCOME_CATEGORIES: Omit<CategoryItem, 'id'>[] = [
   { name: 'Gifts', type: 'income', icon: 'gift-outline', colorBg: '#FFE4E6', colorFg: '#E11D48', notes: 'Occasions & bonuses' },
 ];
 
-export async function seedDefaultCategoriesIfNeeded(): Promise<boolean> {
+// A second Bootstrap run (session/token refresh) used to start a concurrent
+// seed while the first was still inserting, producing duplicate rows. The
+// in-flight promise makes concurrent callers share a single run.
+let seedInFlight: Promise<boolean> | null = null;
+
+export function seedDefaultCategoriesIfNeeded(): Promise<boolean> {
+  if (!seedInFlight) {
+    seedInFlight = runSeed().finally(() => {
+      seedInFlight = null;
+    });
+  }
+  return seedInFlight;
+}
+
+async function runSeed(): Promise<boolean> {
   if (await isSeeded()) return false;
   const existing = await listCategories();
   const hasUncategorized = existing.some((c) => c.isUncategorized);

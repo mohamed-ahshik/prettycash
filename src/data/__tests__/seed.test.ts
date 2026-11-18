@@ -57,6 +57,24 @@ it('does not add a second Uncategorized row', async () => {
   expect(mockInsert.mock.calls.filter(([c]) => c.isUncategorized)).toHaveLength(0);
 });
 
+it('shares one run between concurrent calls', async () => {
+  mockSeeded.mockResolvedValue(false);
+  mockList.mockResolvedValue([]);
+
+  const [first, second] = await Promise.all([
+    seedDefaultCategoriesIfNeeded(),
+    seedDefaultCategoriesIfNeeded(),
+  ]);
+
+  expect(first).toBe(true);
+  expect(second).toBe(true);
+  expect(mockList).toHaveBeenCalledTimes(1);
+  expect(mockSetSeeded).toHaveBeenCalledTimes(1);
+  expect(mockInsert).toHaveBeenCalledTimes(
+    DEFAULT_EXPENSE_CATEGORIES.length + DEFAULT_INCOME_CATEGORIES.length,
+  );
+});
+
 it('exports the expected default categories', () => {
   expect(DEFAULT_EXPENSE_CATEGORIES.length).toBeGreaterThan(0);
   expect(DEFAULT_INCOME_CATEGORIES.length).toBeGreaterThan(0);
