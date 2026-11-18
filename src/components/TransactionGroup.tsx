@@ -1,11 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import { StyleSheet, Text, View } from 'react-native';
 import { Transaction, TransactionGroup as TransactionGroupType } from '../types';
 import { useThemedStyles } from '../context/ThemeContext';
 import { text } from '../theme';
 import type { ThemeColors } from '../theme';
-import { motion } from '../theme/motion';
 import { TransactionRow } from './TransactionRow';
 
 interface TransactionGroupProps {
@@ -21,13 +19,10 @@ export function TransactionGroup({ group, onPressTransaction }: TransactionGroup
   }
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(motion.duration.enter)}
-      layout={LinearTransition.duration(motion.duration.selection)}
-    >
-      <Animated.View style={styles.header}>
+    <View>
+      <View style={styles.header}>
         <Text style={[text.overline, styles.label]}>{group.label}</Text>
-      </Animated.View>
+      </View>
       {group.transactions.map((transaction, index) => (
         <TransactionRow
           key={transaction.id}
@@ -36,7 +31,7 @@ export function TransactionGroup({ group, onPressTransaction }: TransactionGroup
           onPress={() => onPressTransaction?.(transaction)}
         />
       ))}
-    </Animated.View>
+    </View>
   );
 }
 
