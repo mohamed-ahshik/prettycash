@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AboutModal } from '../components/AboutModal';
 import { AlertBanner } from '../components/AlertBanner';
@@ -40,12 +40,14 @@ export function ProfileScreen() {
     dailyLimit,
     openPaywall,
     openCustomerCenter,
+    restorePurchases,
     simulate,
   } = useSubscription();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [recurringVisible, setRecurringVisible] = useState(false);
@@ -120,6 +122,24 @@ export function ProfileScreen() {
       posthog?.capture('recurring_item_deleted');
     } catch (e) {
       setError(getErrorMessage(e));
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    setRestoring(true);
+    try {
+      const restored = await restorePurchases();
+      Alert.alert(
+        'PrettyCash Pro',
+        restored ? 'Purchases restored.' : 'No active subscription found.',
+      );
+    } catch {
+      Alert.alert(
+        'PrettyCash Pro',
+        'Could not restore purchases. Please try again later.',
+      );
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -205,6 +225,30 @@ export function ProfileScreen() {
           </View>
           <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
         </Pressable>
+        {!isPro ? (
+          <Pressable
+            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+            onPress={() => void handleRestorePurchases()}
+            disabled={restoring}
+          >
+            <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
+              <Icon name="restore" size={20} color={colors.foreground} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>Restore Purchases</Text>
+              <Text style={styles.menuSubtitle}>
+                {restoring
+                  ? 'Checking your subscriptions…'
+                  : 'Already subscribed on another device?'}
+              </Text>
+            </View>
+            {restoring ? (
+              <ActivityIndicator size="small" color={colors.mutedForeground} />
+            ) : (
+              <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+            )}
+          </Pressable>
+        ) : null}
         {isPro ? (
           <Pressable
             style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
