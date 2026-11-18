@@ -15,7 +15,7 @@ Plans are grouped into the same numbered modules as architecture and specs.
 | 07 | Insights | [[2026-09-12-insights-screen]] · [[2026-09-18-insights-combined-donut]] |
 | 08 | Categories | [[2026-09-12-categories-screen]] |
 | 09 | Profile and recurring | [[2026-09-12-profile-and-recurring]] · [[2026-10-31-recurring-transactions-edge-function]] |
-| 10 | Subscriptions | [[2026-11-10-revenuecat-subscriptions]] · [[2026-11-18-revenuecat-only-paywall]] |
+| 10 | Subscriptions | [[2026-11-10-revenuecat-subscriptions]] · [[2026-11-18-revenuecat-only-paywall]] · [[2026-11-19-play-trial-revenuecat-only]] |
 
 ## Module notes
 
