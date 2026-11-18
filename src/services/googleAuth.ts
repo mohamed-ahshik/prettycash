@@ -20,17 +20,24 @@ function getNativeModule(): GoogleSignInModule | null {
   return cachedModule;
 }
 
+const staticWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const staticIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+
 function readEnv(name: string): string | undefined {
   const value = process.env[name];
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 function getWebClientId(): string | undefined {
-  return readEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID') ?? readEnv('GCLOUD_CLIENT_ID');
+  return (
+    staticWebClientId?.trim() ||
+    readEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID') ||
+    readEnv('GCLOUD_CLIENT_ID')
+  );
 }
 
 function getIosClientId(): string | undefined {
-  return readEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID');
+  return staticIosClientId?.trim() || readEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID');
 }
 
 export async function signInWithGoogleNative(): Promise<GoogleSignInResult> {

@@ -13,8 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { BrandMark } from '../components/BrandMark';
 import { FacebookLogo, GoogleLogo } from '../components/SocialLogo';
+import { REVIEWER_EMAIL } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
+import { isReviewerEmail } from '../lib/reviewerEmail';
 import { fonts, radii } from '../theme';
 import type { ThemeColors } from '../theme';
 import { getAuthErrorMessage } from '../utils/errorMessage';
@@ -27,8 +29,9 @@ type BusyState = 'google' | 'facebook' | 'email' | null;
 export function LoginScreen() {
   const styles = useThemedStyles(makeStyles);
   const { colors, isDark } = useTheme();
-  const { signInWithProvider, signInWithEmailOtp, authError } = useAuth();
+  const { signInWithProvider, signInWithEmailOtp, signInWithPassword, authError } = useAuth();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState<BusyState>(null);
@@ -53,16 +56,28 @@ export function LoginScreen() {
     }
   };
 
-  const handleSendLink = async () => {
+  const reviewer = isReviewerEmail(email, REVIEWER_EMAIL);
+
+  const handleContinue = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(normalizedEmail)) {
       setError('Enter a valid email address.');
       return;
     }
+
+    if (reviewer && !password) {
+      setError('Enter the password for this account.');
+      return;
+    }
+
     setError(null);
     setSent(false);
     setBusy('email');
     try {
+      if (reviewer) {
+        await signInWithPassword(normalizedEmail, password);
+        return;
+      }
       await signInWithEmailOtp(normalizedEmail);
       setEmail(normalizedEmail);
       setSent(true);
@@ -72,6 +87,17 @@ export function LoginScreen() {
       setBusy(null);
     }
   };
+
+  const submitLabel =
+    busy === 'email'
+      ? reviewer
+        ? 'Signing in…'
+        : 'Sending…'
+      : reviewer
+        ? 'Sign in'
+        : sent
+          ? 'Resend link'
+          : 'Continue';
 
   return (
     <>
@@ -98,6 +124,7 @@ export function LoginScreen() {
             value={email}
             onChangeText={(value) => {
               setEmail(value);
+              setPassword('');
               setSent(false);
               setError(null);
             }}
@@ -110,18 +137,37 @@ export function LoginScreen() {
             editable={busy === null}
           />
 
+          {reviewer ? (
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              placeholder="Password"
+              placeholderTextColor={colors.mutedForeground}
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                setSent(false);
+                setError(null);
+              }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
+              autoComplete="current-password"
+              accessibilityLabel="Password"
+              editable={busy === null}
+            />
+          ) : null}
+
           <Pressable
             style={({ pressed }) => [
               styles.continueButton,
               pressed && styles.pressed,
               busy !== null && styles.disabled,
             ]}
-            onPress={handleSendLink}
+            onPress={handleContinue}
             disabled={busy !== null}
           >
-            <Text style={styles.continueText}>
-              {busy === 'email' ? 'Sending…' : sent ? 'Resend link' : 'Continue'}
-            </Text>
+            <Text style={styles.continueText}>{submitLabel}</Text>
           </Pressable>
 
           {sent ? (
@@ -215,6 +261,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.muted,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  passwordInput: {
+    marginTop: 12,
   },
   continueButton: {
     height: 54,
