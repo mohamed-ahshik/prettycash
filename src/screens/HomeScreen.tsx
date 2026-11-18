@@ -2,11 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BalanceCard } from '../components/BalanceCard';
+import { DailyTransactionList } from '../components/DailyTransactionList';
 import { EditTransactionSheet } from '../components/EditTransactionSheet';
 import { EmptyState } from '../components/EmptyState';
 import { MonthPicker } from '../components/MonthPicker';
 import { MonthYearPickerModal } from '../components/MonthYearPickerModal';
-import { TransactionGroup } from '../components/TransactionGroup';
 import { useMonth } from '../context/MonthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { useThemedStyles } from '../context/ThemeContext';
@@ -60,13 +60,7 @@ export function HomeScreen() {
               subtitle="Tap the camera to scan a receipt, or the pencil to enter it manually."
             />
           ) : (
-            groups.map((group) => (
-              <TransactionGroup
-                key={group.label}
-                group={group}
-                onPressTransaction={setEditing}
-              />
-            ))
+            <DailyTransactionList key={ym} groups={groups} onPressTransaction={setEditing} />
           )}
         </View>
       </ScrollView>
