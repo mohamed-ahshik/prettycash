@@ -15,6 +15,7 @@ Specs are grouped into the same numbered modules as architecture and plans.
 | 07 | Insights | [[2026-09-12-insights-screen-design]] · [[2026-09-18-insights-combined-donut-design]] · [[2026-09-18-insights-long-lists-design]] |
 | 08 | Categories | [[2026-09-12-categories-screen-design]] |
 | 09 | Profile and recurring | [[2026-09-12-profile-and-recurring-design]] · [[2026-10-31-recurring-transactions-edge-function-design]] |
+| 10 | Subscriptions | [[2026-10-31-google-play-subscriptions-design]] · [[2026-11-10-revenuecat-subscriptions-and-trial-design]] · [[2026-11-18-revenuecat-only-paywall-design]] |
 
 ## Module notes
 

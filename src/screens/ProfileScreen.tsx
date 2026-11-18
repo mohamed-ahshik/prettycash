@@ -10,6 +10,7 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import type { SegmentedControlOption } from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
@@ -31,6 +32,16 @@ export function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { setCurrency } = useCurrency();
   const { preference, setPreference, colors } = useTheme();
+  const {
+    isPro,
+    isTrialActive,
+    trialDaysLeft,
+    dailyScansUsed,
+    dailyLimit,
+    openPaywall,
+    openCustomerCenter,
+    simulate,
+  } = useSubscription();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
@@ -172,6 +183,66 @@ export function ProfileScreen() {
           </Text>
           <Text style={styles.userSubtitle}>Member since {profile.memberSince}</Text>
         </View>
+
+        {/* Subscription */}
+        <Text style={[text.overline, styles.sectionHeading]}>Subscription</Text>
+        <Pressable
+          style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+          onPress={openPaywall}
+        >
+          <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
+            <Icon name="crown-outline" size={20} color={colors.primary} />
+          </View>
+          <View style={styles.menuInfo}>
+            <Text style={styles.menuTitle}>PrettyCash Pro</Text>
+            <Text style={styles.menuSubtitle}>
+              {isPro
+                ? 'Unlimited AI receipt scans'
+                : isTrialActive
+                  ? `Trial · ${Math.max(0, trialDaysLeft)} days left · ${Math.max(0, dailyLimit - dailyScansUsed)} scans today`
+                  : 'Unlock unlimited AI receipt scans'}
+            </Text>
+          </View>
+          <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+        </Pressable>
+        {isPro ? (
+          <Pressable
+            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+            onPress={() => void openCustomerCenter()}
+          >
+            <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
+              <Icon name="cog-outline" size={20} color={colors.foreground} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>Manage subscription</Text>
+              <Text style={styles.menuSubtitle}>Cancel, restore, or contact support</Text>
+            </View>
+            <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+          </Pressable>
+        ) : null}
+
+        {__DEV__ ? (
+          <View style={styles.devBox}>
+            <Text style={styles.devTitle}>Developer subscription simulator</Text>
+            <View style={styles.devRow}>
+              {[
+                ['trial', 'Fresh trial'],
+                ['cap', 'Daily cap'],
+                ['expired', 'Expired'],
+                ['pro', 'Pro'],
+                [null, 'Reset'],
+              ].map(([mode, label]) => (
+                <Pressable
+                  key={label}
+                  style={styles.devButton}
+                  onPress={() => simulate(mode as 'trial' | 'cap' | 'expired' | 'pro' | null)}
+                >
+                  <Text style={styles.devButtonText}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Recurring Section */}
         <Text style={[text.overline, styles.sectionHeading]}>Schedule</Text>
@@ -515,5 +586,38 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  devBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.muted,
+  },
+  devTitle: {
+    fontSize: 11,
+    fontFamily: fonts.semibold,
+    color: colors.mutedForeground,
+    marginBottom: 8,
+  },
+  devRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  devButton: {
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  devButtonText: {
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    color: colors.foreground,
   },
 });

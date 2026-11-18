@@ -1,8 +1,9 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSubscription } from '../context/SubscriptionContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { useReceiptPicker } from '../hooks/useReceiptPicker';
 import { fonts, radii, shadows } from '../theme';
@@ -70,24 +71,67 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const compact = width < 340;
   const activeRoute = state.routes[state.index];
   const split = useReceiptPicker();
+  const {
+    canScan,
+    isTrialActive,
+    openPaywall,
+    trialDaysLeft,
+    dailyScansUsed,
+    dailyLimit,
+    recordScan,
+  } = useSubscription();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [initialImage, setInitialImage] = useState<PickedReceiptImage | null>(null);
   const [startManual, setStartManual] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
 
   const scan = async () => {
+    if (!canScan) {
+      if (isTrialActive) {
+        Alert.alert(
+          'Daily trial limit reached',
+          `You have used ${dailyScansUsed}/${dailyLimit} AI scans today. Resets tomorrow, or upgrade for unlimited scans.`,
+          [
+            { text: 'Enter manually', onPress: manual },
+            { text: 'Upgrade to Pro', onPress: openPaywall },
+          ],
+        );
+      } else {
+        openPaywall();
+      }
+      return;
+    }
+
     split.clearError();
     const image = await split.pickFromCamera();
     if (!image) return;
+    recordScan();
     setInitialImage(image);
     setStartManual(false);
     setSheetVisible(true);
   };
 
   const gallery = async () => {
+    if (!canScan) {
+      if (isTrialActive) {
+        Alert.alert(
+          'Daily trial limit reached',
+          `You have used ${dailyScansUsed}/${dailyLimit} AI scans today. Resets tomorrow, or upgrade for unlimited scans.`,
+          [
+            { text: 'Enter manually', onPress: manual },
+            { text: 'Upgrade to Pro', onPress: openPaywall },
+          ],
+        );
+      } else {
+        openPaywall();
+      }
+      return;
+    }
+
     split.clearError();
     const image = await split.pickFromGallery();
     if (!image) return;
+    recordScan();
     setInitialImage(image);
     setStartManual(false);
     setSheetVisible(true);
@@ -152,6 +196,13 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   return (
     <View style={[styles.wrapper, compact && styles.wrapperCompact, { bottom: insets.bottom + 20 }]}>
+      {isTrialActive ? (
+        <View style={styles.trialBadge}>
+          <Text style={styles.trialBadgeText}>
+            Trial: {Math.max(0, trialDaysLeft)} days left · {Math.max(0, dailyLimit - dailyScansUsed)} scans today
+          </Text>
+        </View>
+      ) : null}
       {renderTab('Home')}
       {renderTab('Insights')}
       <SplitAddButton
@@ -186,6 +237,20 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  trialBadge: {
+    position: 'absolute',
+    top: -26,
+    alignSelf: 'center',
+    backgroundColor: colors.foreground,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+  },
+  trialBadgeText: {
+    color: colors.background,
+    fontSize: 10,
+    fontFamily: fonts.semibold,
+  },
   wrapper: {
     position: 'absolute',
     left: 20,
