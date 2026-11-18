@@ -10,6 +10,8 @@
 
 **Spec:** `docs/specs/10-subscriptions/2026-11-18-revenuecat-only-paywall-design.md`
 
+**Implementation status:** Implemented; device verification pending.
+
 ## Global Constraints
 
 - RevenueCat entitlement identifier is `prettycash_pro`.
@@ -297,4 +299,4 @@ git commit -m "docs: document RevenueCat-only paywall"
 
 ## Implementation status
 
-Not started.
+Implemented; device verification pending.

@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-18
 **Status:** Approved
-**Implementation status:** Not started.
+**Implementation status:** Implemented; device verification pending.
 
 ---
 
@@ -134,4 +134,4 @@ Restore must not disappear with the local modal.
 
 ## 10. Implementation status
 
-Not started.
+Implemented; device verification pending.

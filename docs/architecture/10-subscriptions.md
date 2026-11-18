@@ -40,10 +40,8 @@ Quota periods use `profiles.timezone`; usage is recorded by the backend.
 ## Primary code areas
 
 - App:
-  - `src/context/SubscriptionContext.tsx` (planned)
+  - `src/context/SubscriptionContext.tsx` (implemented)
   - `src/services/billing.ts` (planned)
-  - `src/components/ProPaywall.tsx` (planned)
-  - `src/screens/ProScreen.tsx` or paywall modal (planned)
   - `src/services/receiptAnalysis.ts` (quota handling changes)
   - `src/context/AuthContext.tsx` (access token)
 - Backend:
@@ -81,11 +79,13 @@ Paywall
 |---|---|---|
 | `PURCHASED` | Purchase completed in the paywall | Refresh entitlement |
 | `RESTORED` | Restore completed in the paywall | Refresh entitlement |
-| `ERROR` | Paywall failed to load or purchase errored | Show local fallback modal |
+| `ERROR` | Paywall failed to load or purchase errored | Log the error and show the temporarily-unavailable alert with Try again |
 | `NOT_PRESENTED` | User already holds `prettycash_pro` — the paywall was skipped | Do nothing |
 | `CANCELLED` | User dismissed the paywall | Do nothing |
 
 `NOT_PRESENTED` is the subtle one: it is a *success* signal, not a failure. Treating it as an error offers an upgrade screen to a customer who is already paying.
+
+> There is no local fallback paywall. If the hosted paywall cannot load, the app logs the RevenueCat error and shows a temporarily-unavailable alert. Restore Purchases remains available from Profile for non-Pro users.
 
 ## Server authority
 
