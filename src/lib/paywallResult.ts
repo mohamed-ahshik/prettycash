@@ -5,9 +5,12 @@
  * resolves that value when the user already holds the required entitlement, so
  * it must not be treated as a failure. Treating it as one shows an upgrade
  * screen to a customer who is already paying.
+ *
+ * `ERROR` shows the temporarily-unavailable alert because there is no local
+ * fallback paywall.
  */
 
-export type PaywallAction = 'refresh' | 'show-fallback' | 'none';
+export type PaywallAction = 'refresh' | 'show-unavailable' | 'none';
 
 export function paywallAction(result: string): PaywallAction {
   switch (result) {
@@ -15,7 +18,7 @@ export function paywallAction(result: string): PaywallAction {
     case 'RESTORED':
       return 'refresh';
     case 'ERROR':
-      return 'show-fallback';
+      return 'show-unavailable';
     case 'NOT_PRESENTED':
     case 'CANCELLED':
     default:

@@ -9,8 +9,8 @@ describe('paywallAction', () => {
     expect(paywallAction('RESTORED')).toBe('refresh');
   });
 
-  it('falls back to the local paywall only on a real error', () => {
-    expect(paywallAction('ERROR')).toBe('show-fallback');
+  it('reports an unavailable state only on a real error', () => {
+    expect(paywallAction('ERROR')).toBe('show-unavailable');
   });
 
   it('does nothing when the paywall was skipped because the user is already entitled', () => {
