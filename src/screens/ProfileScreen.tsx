@@ -209,7 +209,7 @@ export function ProfileScreen() {
         <Text style={[text.overline, styles.sectionHeading]}>Subscription</Text>
         <Pressable
           style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
-          onPress={openPaywall}
+          onPress={isPro ? () => void openCustomerCenter() : openPaywall}
         >
           <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
             <Icon name="crown-outline" size={20} color={colors.primary} />
@@ -218,7 +218,7 @@ export function ProfileScreen() {
             <Text style={styles.menuTitle}>PrettyCash Pro</Text>
             <Text style={styles.menuSubtitle}>
               {isPro
-                ? 'Unlimited AI receipt scans'
+                ? 'Manage, cancel, or restore your subscription'
                 : isTrialActive
                   ? `Trial · ${Math.max(0, trialDaysLeft)} days left · ${Math.max(0, dailyLimit - dailyScansUsed)} scans today`
                   : 'Unlock unlimited AI receipt scans'}
@@ -250,21 +250,6 @@ export function ProfileScreen() {
             ) : (
               <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
             )}
-          </Pressable>
-        ) : null}
-        {isPro ? (
-          <Pressable
-            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
-            onPress={() => void openCustomerCenter()}
-          >
-            <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
-              <Icon name="cog-outline" size={20} color={colors.foreground} />
-            </View>
-            <View style={styles.menuInfo}>
-              <Text style={styles.menuTitle}>Manage subscription</Text>
-              <Text style={styles.menuSubtitle}>Cancel, restore, or contact support</Text>
-            </View>
-            <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
           </Pressable>
         ) : null}
 
