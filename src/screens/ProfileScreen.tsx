@@ -133,7 +133,8 @@ export function ProfileScreen() {
         'PrettyCash Pro',
         restored ? 'Purchases restored.' : 'No active subscription found.',
       );
-    } catch {
+    } catch (error) {
+      console.warn('[RevenueCat] failed to restore purchases', error);
       Alert.alert(
         'PrettyCash Pro',
         'Could not restore purchases. Please try again later.',
@@ -230,6 +231,8 @@ export function ProfileScreen() {
             style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
             onPress={() => void handleRestorePurchases()}
             disabled={restoring}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: restoring, busy: restoring }}
           >
             <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
               <Icon name="restore" size={20} color={colors.foreground} />
@@ -356,7 +359,7 @@ export function ProfileScreen() {
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>Auto-categorize receipts</Text>
                 <Text style={styles.settingHint}>
-                  AI will pick one of your expense categories. If undetermined it will default to
+                  AI will pick one of your expense categories. If undetermined, it will default to
                   Uncategorized.
                 </Text>
               </View>

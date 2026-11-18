@@ -6,8 +6,9 @@
  * it must not be treated as a failure. Treating it as one shows an upgrade
  * screen to a customer who is already paying.
  *
- * `ERROR` shows the temporarily-unavailable alert because there is no local
- * fallback paywall.
+ * `ERROR` maps to the `show-unavailable` action because there is no local
+ * fallback paywall. The context, not this helper, logs the error and shows the
+ * temporarily-unavailable alert.
  */
 
 export type PaywallAction = 'refresh' | 'show-unavailable' | 'none';

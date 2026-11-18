@@ -10,7 +10,7 @@ Own the PrettyCash Pro subscription lifecycle: Store products, RevenueCat entitl
 
 - Present monthly and annual Pro plans with localized Google Play prices.
 - Run the native Google Play billing purchase flow.
-- Send purchase tokens to the backend for server-side verification.
+- Validate receipts through RevenueCat and process authenticated webhook events on the backend.
 - Use RevenueCat as the subscription source of truth.
 - Enforce free and trial scan quotas on the backend.
 - Synchronize subscription state from RevenueCat webhooks.

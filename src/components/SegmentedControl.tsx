@@ -76,7 +76,11 @@ export function SegmentedControl<T extends string>({
           }}
         >
           <Text
-            style={[styles.label, compact && styles.compactLabel, selected === option.value && styles.activeLabel]}
+            style={[
+              styles.label,
+              compact && styles.compactLabel,
+              selected === option.value && styles.activeLabel,
+            ]}
             numberOfLines={1}
           >
             {option.label}

@@ -171,7 +171,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const listener = (info: CustomerInfo) => {
       setCustomerInfo(info);
     };
-    if (!getApiKey()) return;
+    if (getApiKey().apiKey === null) return;
     Purchases.addCustomerInfoUpdateListener(listener);
 
     return () => {

@@ -44,7 +44,7 @@
 - Consumes: nothing.
 - Produces: `type PaywallAction = 'refresh' | 'show-unavailable' | 'none'`; `paywallAction(result: string): PaywallAction` returns `'show-unavailable'` for `'ERROR'`.
 
-- [ ] **Step 1: Update the failing test**
+- [x] **Step 1: Update the failing test**
 
 Replace the fallback test in `src/lib/__tests__/paywallResult.test.ts` with:
 
@@ -54,21 +54,21 @@ it('reports an unavailable state only on a real error', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- src/lib/__tests__/paywallResult.test.ts --runInBand`
 Expected: FAIL — received `'show-fallback'`, expected `'show-unavailable'`.
 
-- [ ] **Step 3: Rename the action in `src/lib/paywallResult.ts`**
+- [x] **Step 3: Rename the action in `src/lib/paywallResult.ts`**
 
 Change the union to `'refresh' | 'show-unavailable' | 'none'`, return `'show-unavailable'` for `'ERROR'`, and update the module comment to say `ERROR` shows the temporarily-unavailable alert because there is no local fallback paywall.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- src/lib/__tests__/paywallResult.test.ts --runInBand`
 Expected: PASS, all six tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/paywallResult.ts src/lib/__tests__/paywallResult.test.ts
@@ -88,11 +88,11 @@ git commit -m "refactor: rename paywall error action to unavailable"
 - Consumes: `paywallAction` returning `'show-unavailable'` from Task 1.
 - Produces: `restorePurchases: () => Promise<boolean>` (true when `prettycash_pro` is active after the restore). Removes `loading`, `unavailableReason`, `paywallVisible`, `closePaywall`, and `purchasePackage` from `SubscriptionContextValue`.
 
-- [ ] **Step 1: Replace the context interface fields**
+- [x] **Step 1: Replace the context interface fields**
 
 In `src/context/SubscriptionContext.tsx`, remove these fields from `SubscriptionContextValue`: `loading`, `unavailableReason`, `paywallVisible`, `closePaywall`, `purchasePackage`. Change `restorePurchases` to `() => Promise<boolean>`.
 
-- [ ] **Step 2: Add the alert helper and double-tap ref**
+- [x] **Step 2: Add the alert helper and double-tap ref**
 
 At module scope, add:
 
@@ -111,13 +111,13 @@ function showPaywallUnavailableAlert(onRetry: () => void) {
 
 Import `Alert` from `react-native` and add `useRef` to the React import. Remove the unused `PurchasesPackage` type and the unused `canUseAiScan` import. Add `const presentingPaywall = useRef(false);` inside the provider.
 
-- [ ] **Step 3: Remove the local-modal state and simplify `refresh`**
+- [x] **Step 3: Remove the local-modal state and simplify `refresh`**
 
 Delete the `loading`, `unavailableReason`, and `paywallVisible` state hooks and every `setLoading` / `setUnavailableReason` call. In `refresh`:
 - When the API key is null, `console.warn('[RevenueCat] API key is not configured for this platform.')` and return.
 - In the catch, `console.warn('[RevenueCat] failed to load subscriptions', error)`.
 
-- [ ] **Step 4: Rewrite the presentation failure paths**
+- [x] **Step 4: Rewrite the presentation failure paths**
 
 `presentRevenueCatPaywall` must:
 - Return immediately when `presentingPaywall.current` is true; set it true on entry and false in `finally`.
@@ -130,7 +130,7 @@ Delete the `loading`, `unavailableReason`, and `paywallVisible` state hooks and 
 
 `presentCustomerCenter` must use the same helper with its own retry closure; on missing UI log `[RevenueCat] customer center UI unavailable`, and on throw log `[RevenueCat] failed to present customer center`.
 
-- [ ] **Step 5: Update restore and remove the purchase callback**
+- [x] **Step 5: Update restore and remove the purchase callback**
 
 Change `restorePurchases` to:
 
@@ -144,11 +144,11 @@ const restorePurchases = useCallback(async (): Promise<boolean> => {
 
 Delete the `purchasePackage` callback. Update the context value and its dependency array to the reduced surface.
 
-- [ ] **Step 6: Delete the local paywall**
+- [x] **Step 6: Delete the local paywall**
 
 Delete `src/components/ProPaywallModal.tsx`, remove its import from `App.tsx:14`, and remove `<ProPaywallModal />` from `App.tsx:263`.
 
-- [ ] **Step 7: Verify the build and tests**
+- [x] **Step 7: Verify the build and tests**
 
 Run: `npx tsc --noEmit`
 Expected: PASS with no references to the removed fields or component.
@@ -156,7 +156,7 @@ Expected: PASS with no references to the removed fields or component.
 Run: `npm test -- --runInBand`
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/context/SubscriptionContext.tsx App.tsx
@@ -175,7 +175,7 @@ git commit -m "feat: make RevenueCat the only paywall"
 - Consumes: `restorePurchases(): Promise<boolean>` from Task 2.
 - Produces: no new exports.
 
-- [ ] **Step 1: Wire the restore handler**
+- [x] **Step 1: Wire the restore handler**
 
 Add `Alert` to the `react-native` import. Destructure `restorePurchases` from `useSubscription()`. Add `const [restoring, setRestoring] = useState(false);`.
 
@@ -201,7 +201,7 @@ const handleRestorePurchases = async () => {
 };
 ```
 
-- [ ] **Step 2: Render the row for non-Pro users**
+- [x] **Step 2: Render the row for non-Pro users**
 
 Immediately after the PrettyCash Pro `Pressable` and before the `isPro` Manage subscription block, add a `{!isPro ? ... : null}` `Pressable` using the existing `menuRow`, `menuIconBox`, `menuInfo`, `menuTitle`, and `menuSubtitle` styles. It must:
 
@@ -212,7 +212,7 @@ Immediately after the PrettyCash Pro `Pressable` and before the `isPro` Manage s
 - Call `void handleRestorePurchases()` on press.
 - Show an `ActivityIndicator` while restoring, otherwise a `chevron-right` icon.
 
-- [ ] **Step 3: Verify the build and tests**
+- [x] **Step 3: Verify the build and tests**
 
 Run: `npx tsc --noEmit`
 Expected: PASS.
@@ -220,7 +220,7 @@ Expected: PASS.
 Run: `npm test -- --runInBand`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/screens/ProfileScreen.tsx
@@ -241,7 +241,7 @@ git commit -m "feat: add restore purchases to profile"
 - Consumes: the behaviour shipped in Tasks 1–3.
 - Produces: documentation that matches the code.
 
-- [ ] **Step 1: Update the architecture doc**
+- [x] **Step 1: Update the architecture doc**
 
 In `docs/architecture/10-subscriptions.md`, change the `ERROR` row of the presentation table to:
 
@@ -253,20 +253,20 @@ Add below the table:
 
 Remove the stale `ProPaywallModal` / `ProScreen` code-area entries and mark `src/context/SubscriptionContext.tsx` as implemented.
 
-- [ ] **Step 2: Update the spec and plan status**
+- [x] **Step 2: Update the spec and plan status**
 
 In the spec, set `**Status:** Approved` and `**Implementation status:** Implemented; device verification pending.` In this plan, set the header implementation status to `Implemented; device verification pending.` and add the same line to the plan's final section.
 
-- [ ] **Step 3: Index the plan**
+- [x] **Step 3: Index the plan**
 
 Add `[[2026-11-18-revenuecat-only-paywall]]` to the Subscriptions row of `docs/plans/plans-index.md`.
 
-- [ ] **Step 4: Check for dead references**
+- [x] **Step 4: Check for dead references**
 
 Run: `grep -rn "ProPaywallModal\|paywallVisible\|closePaywall\|purchasePackage\|show-fallback\|unavailableReason" src App.tsx`
 Expected: no output.
 
-- [ ] **Step 5: Run the full checks**
+- [x] **Step 5: Run the full checks**
 
 Run: `npx tsc --noEmit`
 Expected: PASS.
@@ -287,8 +287,9 @@ On the development build:
 - Non-Pro account → Restore Purchases reports `No active subscription found.`.
 - Subscribed account → Restore Purchases reports `Purchases restored.`.
 - Hosted paywall shows distinct Monthly and Annual prices.
+- Confirm the hosted paywall shows Privacy Policy, Terms of Service, and the auto-renew disclosure.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs/architecture/10-subscriptions.md docs/specs/10-subscriptions/2026-11-18-revenuecat-only-paywall-design.md docs/plans/10-subscriptions/2026-11-18-revenuecat-only-paywall.md docs/plans/plans-index.md
