@@ -11,7 +11,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabBar } from './src/components/TabBar';
-import { ProPaywallModal } from './src/components/ProPaywallModal';
 import { BrandMark } from './src/components/BrandMark';
 import { SHOW_AUTH_UI } from './src/config';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -260,7 +259,6 @@ function AppNavigator() {
   const navigator = (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <ProPaywallModal />
       <Tab.Navigator
         tabBar={(props) => <TabBar {...props} />}
         screenOptions={{

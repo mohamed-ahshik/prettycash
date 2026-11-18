@@ -4,18 +4,17 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import Purchases, {
   type CustomerInfo,
   type PurchasesOfferings,
-  type PurchasesPackage,
 } from 'react-native-purchases';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { fetchEntitlement, type BackendEntitlement } from '../services/billing';
 import { useAuth } from './AuthContext';
 import {
-  canUseAiScan,
   deriveTrial,
   isScanAllowed,
   type ScanBlockReason,
@@ -42,15 +41,10 @@ interface SubscriptionContextValue {
   canScan: boolean;
   scanBlockReason: ScanBlockReason;
   offerings: PurchasesOfferings | null;
-  loading: boolean;
-  unavailableReason: string | null;
-  paywallVisible: boolean;
   simulation: SimulationMode;
   openPaywall: () => void;
   openCustomerCenter: () => Promise<void>;
-  closePaywall: () => void;
-  purchasePackage: (pkg: PurchasesPackage) => Promise<void>;
-  restorePurchases: () => Promise<void>;
+  restorePurchases: () => Promise<boolean>;
   refresh: () => Promise<void>;
   simulate: (mode: SimulationMode) => void;
 }
@@ -83,17 +77,26 @@ function getApiKey(): RevenueCatKeyResolution {
   });
 }
 
+function showPaywallUnavailableAlert(onRetry: () => void) {
+  Alert.alert(
+    'PrettyCash Pro',
+    'Subscriptions are temporarily unavailable. Please try again later.',
+    [
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Try again', onPress: onRetry },
+    ],
+  );
+}
+
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [unavailableReason, setUnavailableReason] = useState<string | null>(null);
-  const [paywallVisible, setPaywallVisible] = useState(false);
   const [simulation, setSimulation] = useState<SimulationMode>(null);
   const [simulationOverride, setSimulationOverride] = useState<SimulationOverride | null>(null);
   const [backendEntitlement, setBackendEntitlement] = useState<BackendEntitlement | null>(null);
   const [localScansUsed, setLocalScansUsed] = useState(0);
+  const presentingPaywall = useRef(false);
 
   const isPro =
     simulationOverride?.isPro ??
@@ -114,7 +117,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const refresh = useCallback(async () => {
     if (!session?.user) return;
-    setLoading(true);
     try {
       const backend = await fetchEntitlement();
       setBackendEntitlement(backend);
@@ -124,8 +126,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
     const resolution = getApiKey();
     if (resolution.apiKey === null) {
-      setUnavailableReason('RevenueCat is not configured for this platform.');
-      setLoading(false);
+      console.warn('[RevenueCat] API key is not configured for this platform.');
       return;
     }
     const apiKey = resolution.apiKey;
@@ -153,13 +154,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       ]);
       setCustomerInfo(info);
       setOfferings(nextOfferings);
-      setUnavailableReason(null);
     } catch (error) {
-      setUnavailableReason(
-        error instanceof Error ? error.message : 'Subscription products are unavailable.',
-      );
-    } finally {
-      setLoading(false);
+      console.warn('[RevenueCat] failed to load subscriptions', error);
     }
   }, [session?.user]);
 
@@ -183,15 +179,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     };
   }, [session?.user, refresh]);
 
-  const purchasePackage = useCallback(async (pkg: PurchasesPackage) => {
-    const { customerInfo: next } = await Purchases.purchasePackage(pkg);
-    setCustomerInfo(next);
-    setPaywallVisible(false);
-  }, []);
-
-  const restorePurchases = useCallback(async () => {
+  const restorePurchases = useCallback(async (): Promise<boolean> => {
     const next = await Purchases.restorePurchases();
     setCustomerInfo(next);
+    return next.entitlements.active[ENTITLEMENT_ID] != null;
   }, []);
 
   const simulate = useCallback((mode: SimulationMode) => {
@@ -209,11 +200,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const presentRevenueCatPaywall = useCallback(async () => {
+  const presentRevenueCatPaywall = useCallback(async (): Promise<void> => {
+    if (presentingPaywall.current) return;
+    presentingPaywall.current = true;
+    const retry = () => {
+      void presentRevenueCatPaywall();
+    };
     try {
       const ui = getRevenueCatUI();
       if (!ui) {
-        setPaywallVisible(true);
+        console.warn('[RevenueCat] paywall UI unavailable');
+        showPaywallUnavailableAlert(retry);
         return;
       }
       const result = await ui.default.presentPaywallIfNeeded({
@@ -225,8 +222,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         case 'refresh':
           await refresh();
           break;
-        case 'show-fallback':
-          setPaywallVisible(true);
+        case 'show-unavailable':
+          console.warn('[RevenueCat] paywall presentation failed', result);
+          showPaywallUnavailableAlert(retry);
           break;
         case 'none':
         default:
@@ -234,23 +232,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           // CANCELLED: the user dismissed the paywall themselves.
           break;
       }
-    } catch {
-      // No RevenueCat paywall is configured, or the store is unavailable.
-      // Fall back to the branded local paywall.
-      setPaywallVisible(true);
+    } catch (error) {
+      console.warn('[RevenueCat] failed to present paywall', error);
+      showPaywallUnavailableAlert(retry);
+    } finally {
+      presentingPaywall.current = false;
     }
   }, [offerings?.current, refresh]);
 
-  const presentCustomerCenter = useCallback(async () => {
+  const presentCustomerCenter = useCallback(async (): Promise<void> => {
+    const retry = () => {
+      void presentCustomerCenter();
+    };
     try {
       const ui = getRevenueCatUI();
       if (!ui) {
-        setPaywallVisible(true);
+        console.warn('[RevenueCat] customer center UI unavailable');
+        showPaywallUnavailableAlert(retry);
         return;
       }
       await ui.default.presentCustomerCenter();
-    } catch {
-      setPaywallVisible(true);
+    } catch (error) {
+      console.warn('[RevenueCat] failed to present customer center', error);
+      showPaywallUnavailableAlert(retry);
     }
   }, []);
 
@@ -266,16 +270,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       recordScan,
       scanBlockReason,
       offerings,
-      loading,
-      unavailableReason,
-      paywallVisible,
       simulation,
       openPaywall: () => {
         void presentRevenueCatPaywall();
       },
       openCustomerCenter: presentCustomerCenter,
-      closePaywall: () => setPaywallVisible(false),
-      purchasePackage,
       restorePurchases,
       refresh,
       simulate,
@@ -287,12 +286,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       dailyLimit,
       isPro,
       isTrialActive,
-      loading,
       offerings,
-      paywallVisible,
       presentCustomerCenter,
       presentRevenueCatPaywall,
-      purchasePackage,
       refresh,
       restorePurchases,
       scanBlockReason,
@@ -301,7 +297,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       trial.trialEndsAt,
       trialDaysLeft,
       backendEntitlement,
-      unavailableReason,
     ],
   );
 
