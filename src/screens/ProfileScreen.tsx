@@ -356,7 +356,8 @@ export function ProfileScreen() {
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>Auto-categorize receipts</Text>
                 <Text style={styles.settingHint}>
-                  Gemini picks one of your expense categories from the receipt.
+                  AI will pick one of your expense categories. If undetermined it will default to
+                  Uncategorized.
                 </Text>
               </View>
             </View>
@@ -385,6 +386,7 @@ export function ProfileScreen() {
                 }}
                 options={APPEARANCE_OPTIONS}
                 style={styles.appearanceSegment}
+                compact
               />
             </View>
           </View>

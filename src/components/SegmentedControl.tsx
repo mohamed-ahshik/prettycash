@@ -31,6 +31,7 @@ interface SegmentedControlProps<T extends string> {
   onSelect: (value: T) => void;
   options: SegmentedControlOption<T>[];
   style?: StyleProp<ViewStyle>;
+  compact?: boolean;
 }
 
 export function SegmentedControl<T extends string>({
@@ -38,6 +39,7 @@ export function SegmentedControl<T extends string>({
   onSelect,
   options,
   style,
+  compact = false,
 }: SegmentedControlProps<T>) {
   const styles = useThemedStyles(makeStyles);
   const [width, setWidth] = useState(0);
@@ -74,7 +76,7 @@ export function SegmentedControl<T extends string>({
           }}
         >
           <Text
-            style={[styles.label, selected === option.value && styles.activeLabel]}
+            style={[styles.label, compact && styles.compactLabel, selected === option.value && styles.activeLabel]}
             numberOfLines={1}
           >
             {option.label}
@@ -119,6 +121,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
     fontFamily: fonts.semibold,
     color: colors.mutedForeground,
+  },
+  compactLabel: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   activeLabel: {
     color: colors.primaryForeground,
