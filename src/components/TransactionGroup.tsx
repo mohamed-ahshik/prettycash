@@ -33,10 +33,12 @@ export function TransactionGroup({
   return (
     <View>
       <Pressable
-        style={styles.header}
+        style={({ pressed }) => [styles.header, pressed && styles.pressed]}
         onPress={onToggle}
         accessibilityRole="button"
+        accessibilityLabel={`${group.label}, ${formatCurrency(group.total, symbol, decimals)}`}
         accessibilityState={{ expanded }}
+        hitSlop={4}
       >
         <Text style={[text.overline, styles.label]}>{group.label}</Text>
         <View style={styles.headerRight}>
@@ -68,8 +70,12 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 48,
     paddingTop: 20,
     paddingBottom: 6,
+  },
+  pressed: {
+    opacity: 0.75,
   },
   headerRight: {
     flexDirection: 'row',
