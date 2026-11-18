@@ -1,3 +1,13 @@
+jest.mock('../../lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: jest.fn().mockResolvedValue({
+        data: { session: { access_token: 'test-access-token' } },
+      }),
+    },
+  },
+}));
+
 import {
   analyzeReceipt,
   formatAnalysisError,
@@ -71,6 +81,10 @@ it('sends autoCategorize and categories when enabled', async () => {
   await analyzeReceipt('b64', 'image/jpeg', { autoCategorize: true, categories });
 
   const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+  expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+    Authorization: 'Bearer test-access-token',
+    'X-API-Key': 'test-key',
+  });
   expect(body.autoCategorize).toBe(true);
   expect(body.categories).toEqual(categories);
 });
