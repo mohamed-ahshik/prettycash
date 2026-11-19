@@ -72,6 +72,12 @@ export function AddTransactionSheet({
   const [slowWait, setSlowWait] = useState(false);
   const [analysisErrorKind, setAnalysisErrorKind] = useState<AnalysisErrorKind | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
+
+  useEffect(() => {
+    if (isPro && analysisErrorKind === 'subscription-required') {
+      setAnalysisErrorKind('subscription');
+    }
+  }, [isPro, analysisErrorKind]);
   const requestToken = useRef(0);
   const startKey = useRef<string | null>(null);
   const startingRef = useRef(false);

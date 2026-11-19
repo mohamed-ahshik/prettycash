@@ -1,6 +1,6 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -79,7 +79,10 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const [sheetKey, setSheetKey] = useState(0);
 
   const scan = async () => {
-    if (!isReady) return;
+    if (!isReady) {
+      Alert.alert('PrettyCash Pro', 'Checking your subscription. Please try again in a moment.');
+      return;
+    }
     if (!canScan) {
       openPaywall();
       return;
@@ -94,7 +97,10 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   };
 
   const gallery = async () => {
-    if (!isReady) return;
+    if (!isReady) {
+      Alert.alert('PrettyCash Pro', 'Checking your subscription. Please try again in a moment.');
+      return;
+    }
     if (!canScan) {
       openPaywall();
       return;

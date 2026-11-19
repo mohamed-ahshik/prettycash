@@ -314,3 +314,29 @@ it('offers the paywall when a free user scans', async () => {
   pressErrorAction(renderer);
   expect(mockSubscription.openPaywall).toHaveBeenCalledTimes(1);
 });
+
+it('switches the free-user error card to activating after a purchase', async () => {
+  mockSubscription.isPro = false;
+  (analyzeReceipt as jest.Mock).mockRejectedValueOnce(
+    new ReceiptAnalysisError('SUBSCRIPTION_REQUIRED', 'subscription required'),
+  );
+
+  const { renderer, onClose, onRetake, onChoosePhoto } = await renderSheet();
+  expect(visibleText(renderer)).toContain('PrettyCash Pro required');
+
+  mockSubscription.isPro = true;
+  await act(async () => {
+    renderer.update(
+      <Sheet
+        visible
+        initialImage={image}
+        onClose={onClose}
+        onRetake={onRetake}
+        onChoosePhoto={onChoosePhoto}
+      />,
+    );
+  });
+  await flush();
+
+  expect(visibleText(renderer)).toContain('Subscription is activating');
+});

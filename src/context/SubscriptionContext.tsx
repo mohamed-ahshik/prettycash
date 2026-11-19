@@ -130,6 +130,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const refreshGeneration = useRef(0);
   const identifiedUserId = useRef<string | null>(null);
   const logoutPromiseRef = useRef<Promise<unknown> | null>(null);
+  const loginPromiseRef = useRef<Promise<boolean> | null>(null);
+  const identityGeneration = useRef(0);
 
   const state = entitlementState(customerInfo, ENTITLEMENT_ID);
   const isPro =
@@ -143,6 +145,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const logOutQuietly = useCallback(() => {
     if (configuredApiKey === null) return;
+    identityGeneration.current += 1;
     identifiedUserId.current = null;
     try {
       logoutPromiseRef.current = Purchases.logOut().catch((error) => {
@@ -160,23 +163,43 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (identifiedUserId.current === userId) return true;
     if (ensureConfigured() === null) return false;
 
-    try {
-      if ((await currentAppUserID()) === userId) {
+    const generation = identityGeneration.current;
+
+    const existing = loginPromiseRef.current;
+    if (existing) {
+      await existing;
+      if (identityGeneration.current !== generation) return false;
+      if (identifiedUserId.current === userId) return true;
+    }
+
+    const loginPromise = (async () => {
+      try {
+        if ((await currentAppUserID()) === userId) {
+          if (identityGeneration.current !== generation) return false;
+          identifiedUserId.current = userId;
+          return true;
+        }
+
+        // A previous logout must finish before logging in as the next user.
+        if (logoutPromiseRef.current) {
+          await logoutPromiseRef.current;
+        }
+
+        await Purchases.logIn(userId);
+        if (identityGeneration.current !== generation) return false;
         identifiedUserId.current = userId;
         return true;
+      } catch (error) {
+        console.warn('[RevenueCat] failed to identify user', error);
+        return false;
       }
+    })();
 
-      // A previous logout must finish before logging in as the next user.
-      if (logoutPromiseRef.current) {
-        await logoutPromiseRef.current;
-      }
-
-      await Purchases.logIn(userId);
-      identifiedUserId.current = userId;
-      return true;
-    } catch (error) {
-      console.warn('[RevenueCat] failed to identify user', error);
-      return false;
+    loginPromiseRef.current = loginPromise;
+    try {
+      return await loginPromise;
+    } finally {
+      if (loginPromiseRef.current === loginPromise) loginPromiseRef.current = null;
     }
   }, [session?.user?.id]);
 
@@ -203,6 +226,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const loadCustomerInfo = identified || (await currentAppUserID()) === userId;
     const loadOfferings = identified;
 
+    if (refreshGeneration.current !== generation) return;
+
     if (!loadCustomerInfo) {
       // Do not retain a previous user's CustomerInfo; the backend isPro
       // fallback applies until the SDK can identify the current user.
@@ -219,8 +244,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         if (refreshGeneration.current === generation) setCustomerInfo(info);
       } catch (error) {
         console.warn('[RevenueCat] failed to load customer info', error);
-      } finally {
-        if (refreshGeneration.current === generation) setIsReady(true);
       }
     })();
 
@@ -234,10 +257,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           })
       : Promise.resolve();
 
-    await Promise.allSettled([backendTask, customerInfoTask, offeringsTask]);
-
-    // Login or configuration failures must not leave the UI gated forever.
+    // Wait for the fallback and CustomerInfo before declaring readiness, so a
+    // Pro user never flashes as free while one of those sources is pending.
+    await Promise.allSettled([backendTask, customerInfoTask]);
     if (refreshGeneration.current === generation) setIsReady(true);
+
+    // Offerings are independent and already handled; do not block readiness.
+    void offeringsTask;
   }, [ensureIdentified, session?.user?.id]);
 
   useEffect(() => {
