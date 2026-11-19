@@ -11,7 +11,9 @@ export type AnalysisErrorKind =
   | 'poll'
   | 'timeout'
   | 'rejected'
-  | 'failed';
+  | 'failed'
+  | 'subscription'
+  | 'subscription-required';
 
 export type AnalysisErrorAction =
   | 'retry-upload'
@@ -22,7 +24,8 @@ export type AnalysisErrorAction =
   | 'try-again'
   | 'scan-again'
   | 'choose-photo'
-  | 'enter-manually';
+  | 'enter-manually'
+  | 'upgrade';
 
 interface ActionSpec {
   label: string;
@@ -76,6 +79,18 @@ const COPY: Record<AnalysisErrorKind, ErrorCopy> = {
       { label: 'Choose another photo', action: 'choose-photo' },
     ],
   },
+  subscription: {
+    title: 'Subscription is activating',
+    body: 'Google Play confirmed your subscription, but our server hasn\'t received it yet. Try again in a moment.',
+    primary: { label: 'Try again', action: 'try-again' },
+    secondary: [{ label: 'Enter manually', action: 'enter-manually' }],
+  },
+  'subscription-required': {
+    title: 'PrettyCash Pro required',
+    body: 'Start your free trial or subscribe to scan receipts with AI.',
+    primary: { label: 'View plans', action: 'upgrade' },
+    secondary: [{ label: 'Enter manually', action: 'enter-manually' }],
+  },
 };
 
 interface AnalysisErrorCardProps {
@@ -93,6 +108,7 @@ export function AnalysisErrorCard({
 }: AnalysisErrorCardProps) {
   const styles = useThemedStyles(makeStyles);
   const copy = COPY[kind];
+  const hasManualAction = copy.secondary.some((item) => item.action === 'enter-manually');
 
   return (
     <View>
@@ -145,14 +161,16 @@ export function AnalysisErrorCard({
             <Text style={styles.secondaryText}>{item.label}</Text>
           </Pressable>
         ))}
-        <Pressable
-          testID="error-action-enter-manually"
-          style={styles.manual}
-          onPress={() => onAction('enter-manually')}
-          accessibilityRole="button"
-        >
-          <Text style={styles.manualText}>Enter manually</Text>
-        </Pressable>
+        {!hasManualAction ? (
+          <Pressable
+            testID="error-action-enter-manually"
+            style={styles.manual}
+            onPress={() => onAction('enter-manually')}
+            accessibilityRole="button"
+          >
+            <Text style={styles.manualText}>Enter manually</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

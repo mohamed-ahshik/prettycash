@@ -12,6 +12,8 @@
 
 **Branch:** `mohamedahshik/addPayment`
 
+**Implementation status:** Implemented; device verification pending.
+
 ## Global Constraints
 
 - Entitlement ID is `prettycash_pro`.
@@ -52,7 +54,7 @@
   - `entitlementState(customerInfo: CustomerInfo | null, entitlementId: string): EntitlementState`
   - `formatTrialEnd(expirationDate: string | null, locale?: string): string | null`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `src/lib/__tests__/entitlement.test.ts` with a `customerInfo` fixture cast through `unknown as CustomerInfo`. Assert:
 
@@ -79,23 +81,23 @@ expect(formatTrialEnd(null)).toBeNull();
 expect(formatTrialEnd('not-a-date', 'en-US')).toBeNull();
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- src/lib/__tests__/entitlement.test.ts --runInBand`
 Expected: FAIL — module does not exist.
 
-- [ ] **Step 3: Implement the helper**
+- [x] **Step 3: Implement the helper**
 
 `entitlementState` returns all-false/null for a null `CustomerInfo`; otherwise reads `customerInfo.entitlements.active[entitlementId]` and maps `periodType`, `expirationDate`, `willRenew`, and `customerInfo.managementURL`.
 
 `formatTrialEnd` parses the ISO string, returns null for null/invalid, and uses `toLocaleDateString(locale, { month: 'short', day: 'numeric' })`.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- src/lib/__tests__/entitlement.test.ts --runInBand`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/entitlement.ts src/lib/__tests__/entitlement.test.ts
@@ -118,7 +120,7 @@ git commit -m "feat: add RevenueCat entitlement state helper"
 - Produces: `PLAY_STORE_SUBSCRIPTIONS_URL` constant in `src/config.ts`.
 - Keeps the old trial fields temporarily until Task 3 so Profile/TabBar still compile.
 
-- [ ] **Step 1: Add the Play Store fallback constant**
+- [x] **Step 1: Add the Play Store fallback constant**
 
 In `src/config.ts`:
 
@@ -127,11 +129,11 @@ export const PLAY_STORE_SUBSCRIPTIONS_URL =
   'https://play.google.com/store/account/subscriptions?package=com.mohamedahshik.prettycash';
 ```
 
-- [ ] **Step 2: Simplify the backend entitlement type**
+- [x] **Step 2: Simplify the backend entitlement type**
 
 `src/services/billing.ts` becomes `{ isPro: boolean }` (extra response fields are ignored).
 
-- [ ] **Step 3: Configure at startup and log in with Supabase**
+- [x] **Step 3: Configure at startup and log in with Supabase**
 
 In `SubscriptionContext.tsx`:
 
@@ -155,7 +157,7 @@ const managementURL = state.managementURL ?? PLAY_STORE_SUBSCRIPTIONS_URL;
 - In the session effect, ensure configuration first. With a session, call `refresh` and register the customer-info listener. Without a session, clear state and call `Purchases.logOut().catch(...)`.
 - Keep `presentRevenueCatPaywall` and Customer Center code for Task 3.
 
-- [ ] **Step 4: Move the provider above the auth gate**
+- [x] **Step 4: Move the provider above the auth gate**
 
 In `App.tsx`, wrap `Gate` directly:
 
@@ -169,7 +171,7 @@ In `App.tsx`, wrap `Gate` directly:
 
 Remove `SubscriptionProvider` from the authenticated `Bootstrap` return. The provider must mount at app startup so `ensureConfigured()` runs before any paywall/offering request.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `npx tsc --noEmit`
 Expected: PASS.
@@ -177,7 +179,7 @@ Expected: PASS.
 Run: `npm test -- --runInBand`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add App.tsx src/config.ts src/context/SubscriptionContext.tsx src/services/billing.ts
@@ -199,7 +201,7 @@ git commit -m "feat: configure RevenueCat at startup and expose trial state"
 - Consumes: `isPro`, `isTrial`, `expirationDate`, `managementURL`, `canScan`, `openPaywall`, `restorePurchases`, `simulate` from Task 2.
 - Produces: context removes `isTrialActive`, `trialDaysLeft`, `trialEndsAt`, `dailyScansUsed`, `dailyLimit`, `recordScan`, `scanBlockReason`, `openCustomerCenter`.
 
-- [ ] **Step 1: Update Profile**
+- [x] **Step 1: Update Profile**
 
 - Destructure the new fields; remove the old trial fields and `openCustomerCenter`.
 - Pro/trial: render a non-pressable status row (no chevron). Subtitle: `Trial active, ends ${formatTrialEnd(expirationDate)}` when `isTrial`, else `Unlimited AI receipt scans`.
@@ -208,14 +210,14 @@ git commit -m "feat: configure RevenueCat at startup and expose trial state"
 - Keep the Restore Purchases row for `!isPro`.
 - Update the dev simulator to `Fresh trial`, `Expired`, `Pro`, `Reset`; remove `Daily cap`.
 
-- [ ] **Step 2: Update TabBar**
+- [x] **Step 2: Update TabBar**
 
 - Destructure `canScan`, `isTrial`, `expirationDate`, `openPaywall`; remove the old trial/daily fields and `recordScan`.
 - `scan`/`gallery`: if `!canScan`, call `openPaywall()` and return; remove the daily trial-limit Alert and `recordScan` calls.
 - Trial badge: `Trial ends ${formatTrialEnd(expirationDate)}` when `isTrial && expirationDate`; otherwise render nothing.
 - Remove the now-unused `Alert` import if nothing else in `TabBar` uses it.
 
-- [ ] **Step 3: Remove the dead state and Customer Center**
+- [x] **Step 3: Remove the dead state and Customer Center**
 
 - Set `canScan = isPro`.
 - Remove the old context fields, their calculations, and `recordScan`.
@@ -223,7 +225,7 @@ git commit -m "feat: configure RevenueCat at startup and expose trial state"
 - Remove the `deriveTrial` / `isScanAllowed` imports.
 - Delete `src/lib/subscriptionState.ts` and its test.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `npx tsc --noEmit`
 Expected: PASS.
@@ -231,7 +233,7 @@ Expected: PASS.
 Run: `npm test -- --runInBand`
 Expected: PASS (suite count drops by the removed test file).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/TabBar.tsx src/context/SubscriptionContext.tsx src/screens/ProfileScreen.tsx
@@ -253,7 +255,7 @@ git commit -m "feat: show RevenueCat trial state and store management link"
 - Modify: `docs/plans/10-subscriptions/2026-11-19-play-trial-revenuecat-only.md`
 - Modify: `docs/plans/plans-index.md`
 
-- [ ] **Step 1: Add the subscription error kinds**
+- [x] **Step 1: Add the subscription error kinds**
 
 In `AnalysisErrorCard.tsx`:
 
@@ -263,22 +265,22 @@ In `AnalysisErrorCard.tsx`:
   - `subscription`: title `Subscription is activating`, body `Google Play confirmed your subscription, but our server hasn't received it yet. Try again in a moment.`, primary `Try again` (`try-again`), secondary `Enter manually` (`enter-manually`).
   - `subscription-required`: title `PrettyCash Pro required`, body `Start your free trial or subscribe to scan receipts with AI.`, primary `View plans` (`upgrade`), secondary `Enter manually` (`enter-manually`).
 
-- [ ] **Step 2: Map the backend error**
+- [x] **Step 2: Map the backend error**
 
 In `AddTransactionSheet.tsx`:
 - Use `const { isPro, openPaywall } = useSubscription();`.
 - In `failAnalysis`, when `analysisError?.code === 'SUBSCRIPTION_REQUIRED'`, set `kind` to `'subscription'` if `isPro`, otherwise `'subscription-required'`.
 - In `handleErrorAction`, handle `'upgrade'` by calling `openPaywall()` and returning.
 
-- [ ] **Step 3: Test the mapping**
+- [x] **Step 3: Test the mapping**
 
 In `AddTransactionSheet.test.tsx`, mock `useSubscription` with `{ isPro: true, openPaywall: jest.fn() }`, throw `new ReceiptAnalysisError('SUBSCRIPTION_REQUIRED', '...')` from `analyzeReceipt`, and assert `Subscription is activating` appears. Add a second case with `isPro: false` asserting `PrettyCash Pro required`.
 
-- [ ] **Step 4: Write the README testing section**
+- [x] **Step 4: Write the README testing section**
 
 Add the Play internal-testing/license-tester steps from spec §8, including: development build, live `goog_` public key, no secret key, new account for `free-trial-7d`, purchase/trial/restore/cancel/expiry checks, and product troubleshooting.
 
-- [ ] **Step 5: Update architecture docs**
+- [x] **Step 5: Update architecture docs**
 
 In `docs/architecture/10-subscriptions.md`, replace the app-managed trial/daily-cap/Customer Center sections with:
 - Play `free-trial-7d` is full Pro; free users 0 scans.
@@ -287,11 +289,11 @@ In `docs/architecture/10-subscriptions.md`, replace the app-managed trial/daily-
 - Management uses `CustomerInfo.managementURL` with the Play Store fallback.
 - Update the code areas list to include `src/lib/entitlement.ts`; remove `subscriptionState.ts` and Customer Center references.
 
-- [ ] **Step 6: Update statuses and index**
+- [x] **Step 6: Update statuses and index**
 
 Set the spec and this plan to `Implemented; device verification pending.` Tick completed steps except the device checklist. Add `[[2026-11-19-play-trial-revenuecat-only]]` to the Subscriptions row in `docs/plans/plans-index.md`.
 
-- [ ] **Step 7: Full checks**
+- [x] **Step 7: Full checks**
 
 Run: `npx tsc --noEmit`
 Expected: PASS.
@@ -299,7 +301,7 @@ Expected: PASS.
 Run: `npm test -- --runInBand`
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/components/AnalysisErrorCard.tsx src/components/AddTransactionSheet.tsx src/components/__tests__/AddTransactionSheet.test.tsx README.md docs/architecture/10-subscriptions.md docs/specs/10-subscriptions/2026-11-19-play-trial-revenuecat-only-design.md docs/plans/10-subscriptions/2026-11-19-play-trial-revenuecat-only.md docs/plans/plans-index.md
@@ -310,4 +312,4 @@ git commit -m "docs: document Play trial and scan activation handling"
 
 ## Implementation status
 
-Not started.
+Implemented; device verification pending.

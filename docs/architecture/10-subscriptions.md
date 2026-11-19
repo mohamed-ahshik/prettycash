@@ -1,6 +1,6 @@
 # 10 — Subscriptions
 
-Implementation status: Frontend paywall/trial simulator, backend quota/webhook routes, schema, and receipt JWT auth implemented; RevenueCat entitlement, offering, hosted paywall, and live `goog_` key in EAS production configured; Play products, credential validation, deployment, and device verification pending.
+Implementation status: RevenueCat-only entitlement, Play trial, hosted paywall, backend quota/webhook routes, and Play Store management link implemented; Play products, credential validation, deployment, and device verification pending.
 
 ## Purpose
 
@@ -8,68 +8,84 @@ Own the PrettyCash Pro subscription lifecycle: Store products, RevenueCat entitl
 
 ## Responsibilities
 
-- Present monthly and annual Pro plans with localized Google Play prices.
-- Run the native Google Play billing purchase flow.
-- Validate receipts through RevenueCat and process authenticated webhook events on the backend.
+- Present monthly and annual Pro plans with localized Google Play prices in the hosted RevenueCat paywall.
+- Treat the Play `free-trial-7d` offer as full Pro.
+- Process authenticated RevenueCat webhook events on the backend.
 - Use RevenueCat as the subscription source of truth.
-- Enforce free and trial scan quotas on the backend.
+- Enforce the Pro-only scan quota on the backend.
 - Synchronize subscription state from RevenueCat webhooks.
 - Expose entitlement/quota state to the app.
-- Provide restore purchases and billing recovery paths.
+- Provide restore purchases and Google Play subscription-management paths.
 
 ## Product model
 
 - Google Play subscription: **`prettycash_pro`**
   - base plan `monthly` — monthly
   - base plan `annual` — annual
+  - offer `free-trial-7d`, new customers only, on both base plans
 - RevenueCat packages: `$rc_monthly`, `$rc_annual`
-- Post-trial Pro: unlimited AI receipt scans
+- Play trial: full Pro — unlimited AI receipt scans
+- Free and expired users: 0 AI scans; manual expense/income tracking stays free
 
 ## Entitlement and quota model
 
-| State | Pro access | Scan limit |
+| State | Entitlement | AI scans |
 |---|---|---|
-| Free | No | 4 per month |
-| Pro trial | Yes | 3 per day |
-| Active Pro | Yes | Unlimited |
-| Grace period | Yes | Unlimited |
-| On hold / paused / expired | No | Free rules |
+| No entitlement | inactive | 0 |
+| Play trial (`periodType === 'TRIAL'`) | active | Unlimited |
+| Active Pro | active | Unlimited |
+| Grace period | active | Unlimited |
+| Expired / paused / on hold | inactive | 0 |
 
-Quota periods use `profiles.timezone`; usage is recorded by the backend.
+`src/lib/entitlement.ts` derives `isPro`, `isTrial`, `expirationDate`, `willRenew`, and `managementURL` from `CustomerInfo`. `isTrial` is true only when the entitlement `periodType` is `TRIAL`; there are no local timers, local storage, or account-age calculations.
+
+The backend quota is `is_pro` only. RevenueCat's webhook sets `profiles.is_pro`, and a trial's `INITIAL_PURCHASE` counts as active. The `scan_usage` table is retained for historical data but is no longer written or read for quota.
 
 ## Primary code areas
 
 - App:
   - `src/context/SubscriptionContext.tsx` (implemented)
-  - `src/services/billing.ts` (planned)
-  - `src/services/receiptAnalysis.ts` (quota handling changes)
+  - `src/lib/entitlement.ts` (implemented)
+  - `src/lib/revenuecatKey.ts` (public SDK key resolution)
+  - `src/lib/paywallResult.ts` (hosted paywall result mapping)
+  - `src/services/billing.ts` (startup `isPro` fallback)
+  - `src/services/receiptAnalysis.ts` (`SUBSCRIPTION_REQUIRED` handling)
   - `src/context/AuthContext.tsx` (access token)
 - Backend:
   - `app/api/v1/billing.py` (RevenueCat webhook + entitlement)
-  - `app/services/quota.py` (trial and scan quota)
+  - `app/services/quota.py` (`is_pro` scan quota)
   - `app/api/deps.py` (Supabase JWT + API key authentication)
   - `app/api/v1/receipt.py` (quota enforcement)
-  - `app/core/config.py` (trial and RevenueCat webhook config)
+  - `app/core/config.py` (RevenueCat webhook config)
 - Supabase:
-  - `subscriptions` table (planned)
-  - `scan_usage` table (planned)
+  - `profiles.is_pro` (cached entitlement)
+  - `scan_usage` table (historical only)
   - RLS policies
 - EAS/native:
   - `react-native-purchases` development build
-  - Google Play products
-  - RevenueCat project, offerings, entitlement, and webhook
+  - Google Play products and the `free-trial-7d` offer
+  - RevenueCat project, offerings, entitlement, hosted paywall, and webhook
 
 ## Purchase flow
 
 ```text
-Paywall
-  → fetch RevenueCat offerings and localized prices
-  → RevenueCat purchase Package
+Hosted RevenueCat paywall
+  → localized Play prices and the free-trial-7d offer
   → native Google Play checkout
   → CustomerInfo entitlement updates
   → backend entitlement refresh
   → RevenueCat webhook updates profiles.is_pro
 ```
+
+## Scan activation lag
+
+The backend can return `SUBSCRIPTION_REQUIRED` after Google Play has confirmed a purchase but before the RevenueCat webhook has set `profiles.is_pro`. While `isPro` is true, the app shows **Subscription is activating** with **Try again** and **Enter manually**; it never grants local scan access to bypass the backend. While `isPro` is false, the same error shows **PrettyCash Pro required** with **View plans**, which opens the hosted paywall. Manual entry remains available from both cards.
+
+## Subscription management
+
+The app opens `CustomerInfo.managementURL`, which RevenueCat resolves to the Google Play subscription-management screen. When RevenueCat returns no URL, `PLAY_STORE_SUBSCRIPTIONS_URL` in `src/config.ts` opens the generic Play Store subscriptions page.
+
+There is no RevenueCat Customer Center; the `managementURL` link satisfies Google Play's in-app cancellation requirement.
 
 ## Paywall presentation results
 
@@ -103,7 +119,7 @@ The backend derives the user from the Supabase JWT. RevenueCat validates store r
 
 Platform keys win over the shared key, so a stale shared value cannot shadow a live store key.
 
-A `test_...` key is a **Test Store** key: purchases complete without real billing. It is accepted in every build, including release, so internal-testing builds delivered through Google Play can exercise the paywall before live billing exists. In a release build the provider logs a warning instead of blocking:
+A `test_...` key is a **Test Store** key: purchases complete without real billing. It is accepted in every build, including release. In a release build the provider logs a warning instead of blocking:
 
 ```text
 [RevenueCat] Using a Test Store key in a release build.
@@ -118,15 +134,16 @@ EAS **production** carries the live `goog_...` key, so release builds configure 
 
 It is not sufficient on its own: the Play subscriptions must exist and be attached to the `default` offering, or the SDK loads an empty offering and the hosted paywall shows no packages. The service account credentials must also validate before RevenueCat can read Play products.
 
-Remaining work is tracked in [[2026-11-10-revenuecat-subscriptions]] under *Production environment gaps*.
+Remaining work is tracked in [[2026-11-19-play-trial-revenuecat-only]].
 
 ## Boundaries
 
 - The categories, transactions, insights, and receipt-analysis features consume entitlement decisions but do not own billing.
-- The backend owns verification and quota accounting.
+- The backend owns webhook processing and quota enforcement.
 - RevenueCat owns subscription state; Google Play owns prices and payment execution.
 
 ## Related documentation
 
+- [[2026-11-19-play-trial-revenuecat-only-design]]
 - [[2026-10-31-google-play-subscriptions-design]]
 - [[architecture-index|Back to architecture index]]

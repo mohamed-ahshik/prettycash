@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-19
 **Status:** Approved
-**Implementation status:** Not started.
+**Implementation status:** Implemented; device verification pending.
 
 **Branches:**
 - Frontend: `mohamedahshik/addPayment`
@@ -305,4 +305,4 @@ Device:
 
 ## 12. Implementation status
 
-Not started.
+Implemented; device verification pending.
