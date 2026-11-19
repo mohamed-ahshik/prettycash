@@ -294,7 +294,9 @@ it('shows the activating message when a Pro purchase has not reached the backend
 
   const { renderer } = await renderSheet();
   expect(visibleText(renderer)).toContain('Subscription is activating');
-  expect(visibleText(renderer)).toContain('Try again');
+  expect(
+    renderer.root.findByProps({ testID: 'error-action-try-again' }),
+  ).toBeTruthy();
   expect(visibleText(renderer)).not.toContain('form:');
 });
 

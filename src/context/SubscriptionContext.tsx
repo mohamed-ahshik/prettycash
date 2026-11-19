@@ -34,6 +34,7 @@ interface SubscriptionContextValue {
   willRenew: boolean;
   managementURL: string;
   canScan: boolean;
+  isReady: boolean;
   offerings: PurchasesOfferings | null;
   simulation: SimulationMode;
   openPaywall: () => void;
@@ -97,14 +98,11 @@ function ensureConfigured(): string | null {
   return apiKey;
 }
 
-function logOutQuietly(): void {
-  if (configuredApiKey === null) return;
+async function currentAppUserID(): Promise<string | null> {
   try {
-    void Purchases.logOut().catch((error) => {
-      console.warn('[RevenueCat] failed to log out', error);
-    });
-  } catch (error) {
-    console.warn('[RevenueCat] failed to log out', error);
+    return await Purchases.getAppUserID();
+  } catch {
+    return null;
   }
 }
 
@@ -126,9 +124,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [simulation, setSimulation] = useState<SimulationMode>(null);
   const [simulationOverride, setSimulationOverride] = useState<SimulationOverride | null>(null);
   const [backendEntitlement, setBackendEntitlement] = useState<BackendEntitlement | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const presentingPaywall = useRef(false);
   const hadSession = useRef(false);
   const refreshGeneration = useRef(0);
+  const identifiedUserId = useRef<string | null>(null);
+  const logoutPromiseRef = useRef<Promise<unknown> | null>(null);
 
   const state = entitlementState(customerInfo, ENTITLEMENT_ID);
   const isPro =
@@ -140,29 +141,67 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const managementURL = state.managementURL ?? PLAY_STORE_SUBSCRIPTIONS_URL;
   const canScan = isPro;
 
+  const logOutQuietly = useCallback(() => {
+    if (configuredApiKey === null) return;
+    identifiedUserId.current = null;
+    try {
+      logoutPromiseRef.current = Purchases.logOut().catch((error) => {
+        console.warn('[RevenueCat] failed to log out', error);
+      });
+    } catch (error) {
+      console.warn('[RevenueCat] failed to log out', error);
+    }
+  }, []);
+
+  const ensureIdentified = useCallback(async (): Promise<boolean> => {
+    const userId = session?.user?.id;
+    if (!userId) return false;
+
+    if (identifiedUserId.current === userId) return true;
+    if (ensureConfigured() === null) return false;
+
+    try {
+      if ((await currentAppUserID()) === userId) {
+        identifiedUserId.current = userId;
+        return true;
+      }
+
+      // A previous logout must finish before logging in as the next user.
+      if (logoutPromiseRef.current) {
+        await logoutPromiseRef.current;
+      }
+
+      await Purchases.logIn(userId);
+      identifiedUserId.current = userId;
+      return true;
+    } catch (error) {
+      console.warn('[RevenueCat] failed to identify user', error);
+      return false;
+    }
+  }, [session?.user?.id]);
+
   const refresh = useCallback(async () => {
     const generation = refreshGeneration.current + 1;
     refreshGeneration.current = generation;
 
-    const apiKey = ensureConfigured();
-    const user = session?.user;
-    if (!user) return;
+    const userId = session?.user?.id;
+    if (!userId) return;
 
-    let loginFailed = false;
-    if (apiKey !== null) {
-      try {
-        await Purchases.logIn(user.id);
-      } catch (error) {
-        loginFailed = true;
-        console.warn('[RevenueCat] failed to log in', error);
-      }
-    }
+    const backendTask = fetchEntitlement()
+      .then((value) => {
+        if (refreshGeneration.current === generation) setBackendEntitlement(value);
+      })
+      .catch((error) => {
+        console.warn('[RevenueCat] failed to load backend entitlement', error);
+      });
+
+    const identified = await ensureIdentified();
 
     // A newer refresh (new session or explicit retry) supersedes this one.
     if (refreshGeneration.current !== generation) return;
 
-    const loadCustomerInfo = apiKey !== null && !loginFailed;
-    const loadOfferings = apiKey !== null;
+    const loadCustomerInfo = identified || (await currentAppUserID()) === userId;
+    const loadOfferings = identified;
 
     if (!loadCustomerInfo) {
       // Do not retain a previous user's CustomerInfo; the backend isPro
@@ -170,53 +209,49 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       setCustomerInfo(null);
     }
 
-    const customerInfoPromise: Promise<CustomerInfo | null> = loadCustomerInfo
-      ? Purchases.getCustomerInfo()
-      : Promise.resolve(null);
-    const offeringsPromise: Promise<PurchasesOfferings | null> = loadOfferings
+    // Each request applies its own state as soon as it settles. Backend and
+    // offerings never hold back CustomerInfo, so a slow response cannot leave
+    // the UI gated behind a stale subscription state.
+    const customerInfoTask = (async () => {
+      try {
+        if (!loadCustomerInfo) return;
+        const info = await Purchases.getCustomerInfo();
+        if (refreshGeneration.current === generation) setCustomerInfo(info);
+      } catch (error) {
+        console.warn('[RevenueCat] failed to load customer info', error);
+      } finally {
+        if (refreshGeneration.current === generation) setIsReady(true);
+      }
+    })();
+
+    const offeringsTask = loadOfferings
       ? Purchases.getOfferings()
-      : Promise.resolve(null);
+          .then((next) => {
+            if (refreshGeneration.current === generation) setOfferings(next);
+          })
+          .catch((error) => {
+            console.warn('[RevenueCat] failed to load offerings', error);
+          })
+      : Promise.resolve();
 
-    const [backendResult, customerInfoResult, offeringsResult] = await Promise.allSettled([
-      fetchEntitlement(),
-      customerInfoPromise,
-      offeringsPromise,
-    ]);
+    await Promise.allSettled([backendTask, customerInfoTask, offeringsTask]);
 
-    if (refreshGeneration.current !== generation) return;
-
-    if (backendResult.status === 'fulfilled') {
-      setBackendEntitlement(backendResult.value);
-    } else {
-      console.warn('[RevenueCat] failed to load backend entitlement', backendResult.reason);
-    }
-
-    if (customerInfoResult.status === 'fulfilled') {
-      if (customerInfoResult.value !== null) {
-        setCustomerInfo(customerInfoResult.value);
-      }
-    } else {
-      console.warn('[RevenueCat] failed to load customer info', customerInfoResult.reason);
-    }
-
-    if (offeringsResult.status === 'fulfilled') {
-      if (offeringsResult.value !== null) {
-        setOfferings(offeringsResult.value);
-      }
-    } else {
-      console.warn('[RevenueCat] failed to load offerings', offeringsResult.reason);
-    }
-  }, [session?.user]);
+    // Login or configuration failures must not leave the UI gated forever.
+    if (refreshGeneration.current === generation) setIsReady(true);
+  }, [ensureIdentified, session?.user?.id]);
 
   useEffect(() => {
-    const apiKey = ensureConfigured();
+    ensureConfigured();
 
     // Auth has not resolved yet. Configuration must still run at startup, but
     // clearing state or logging out now would race session restoration.
     if (loading) return;
 
-    if (!session?.user) {
+    const userId = session?.user?.id;
+
+    if (!userId) {
       refreshGeneration.current += 1;
+      setIsReady(false);
       setCustomerInfo(null);
       setOfferings(null);
       setBackendEntitlement(null);
@@ -233,9 +268,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       console.warn('[RevenueCat] failed to refresh subscription state', error);
     });
 
-    if (apiKey === null) return;
+    if (configuredApiKey === null) return;
 
     const listener = (info: CustomerInfo) => {
+      if (identifiedUserId.current !== userId) return;
       setCustomerInfo(info);
     };
     Purchases.addCustomerInfoUpdateListener(listener);
@@ -243,13 +279,23 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return () => {
       Purchases.removeCustomerInfoUpdateListener(listener);
     };
-  }, [session?.user, loading, refresh]);
+  }, [session?.user?.id, loading, refresh, logOutQuietly]);
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
+    const userId = session?.user?.id;
+    const identified = await ensureIdentified();
+    if (!identified || !userId) {
+      throw new Error('RevenueCat user is not identified');
+    }
+
     const next = await Purchases.restorePurchases();
+    if ((await currentAppUserID()) !== userId) {
+      throw new Error('RevenueCat user changed while restoring purchases');
+    }
+
     setCustomerInfo(next);
     return next.entitlements.active[ENTITLEMENT_ID] != null;
-  }, []);
+  }, [ensureIdentified, session?.user?.id]);
 
   const simulate = useCallback((mode: SimulationMode) => {
     setSimulation(mode);
@@ -283,6 +329,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       void presentRevenueCatPaywall();
     };
     try {
+      const identified = await ensureIdentified();
+      if (!identified) {
+        console.warn('[RevenueCat] cannot present paywall before identifying the user');
+        showPaywallUnavailableAlert(retry);
+        return;
+      }
+
       const ui = getRevenueCatUI();
       if (!ui) {
         console.warn('[RevenueCat] paywall UI unavailable');
@@ -314,7 +367,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     } finally {
       presentingPaywall.current = false;
     }
-  }, [offerings?.current, refresh]);
+  }, [ensureIdentified, offerings?.current, refresh]);
 
   const value = useMemo<SubscriptionContextValue>(
     () => ({
@@ -324,6 +377,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       willRenew,
       managementURL,
       canScan,
+      isReady,
       offerings,
       simulation,
       openPaywall: () => {
@@ -337,6 +391,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       canScan,
       expirationDate,
       isPro,
+      isReady,
       isTrial,
       managementURL,
       offerings,

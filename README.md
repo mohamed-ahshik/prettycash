@@ -23,4 +23,5 @@ PrettyCash Pro uses Google Play billing through RevenueCat. The hosted RevenueCa
    - the `free-trial-7d` offer is attached to both base plans;
    - RevenueCat's Google Play service-account credentials validate;
    - both products are attached to the `prettycash_pro` entitlement and the `default` offering is current;
+   - the hosted paywall is published in the RevenueCat Paywall editor and attached to the `default` offering;
    - the tester installed from the testing link with a licensed account.

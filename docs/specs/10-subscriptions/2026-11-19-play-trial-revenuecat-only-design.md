@@ -50,6 +50,7 @@ interface SubscriptionContextValue {
   willRenew: boolean;
   managementURL: string;
   canScan: boolean;
+  isReady: boolean;
   offerings: PurchasesOfferings | null;
   simulation: SimulationMode;
   openPaywall: () => void;
@@ -232,7 +233,7 @@ Remove `inTrial`, `trialDaysLeft`, `dailyScansUsed`, `dailyLimit`.
 
 `src/services/billing.ts` becomes `{ isPro: boolean }` (or keeps extra fields ignored). It is only a startup fallback for `isPro`.
 
-**Reconciliation:** the RevenueCat webhook may land a few seconds after a purchase while the app already shows `isPro`. If the receipt API returns `SUBSCRIPTION_REQUIRED` during that window, show a specific "Your subscription is still activating. Try again shortly." message instead of a generic analysis error. Do not grant local access to bypass the backend.
+**Reconciliation:** the RevenueCat webhook may land a few seconds after a purchase while the app already shows `isPro`. If the receipt API returns `SUBSCRIPTION_REQUIRED` during that window, show **Subscription is activating** with **Google Play confirmed your subscription, but our server hasn't received it yet. Try again in a moment.** instead of a generic analysis error. Do not grant local access to bypass the backend.
 
 ## 8. README testing notes
 

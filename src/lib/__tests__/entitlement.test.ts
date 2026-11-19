@@ -76,7 +76,7 @@ describe('entitlementState', () => {
 
 describe('formatTrialEnd', () => {
   it('formats an ISO expiration date as a short month and day', () => {
-    expect(formatTrialEnd('2026-11-26T12:00:00Z', 'en-US')).toBe('Nov 26');
+    expect(formatTrialEnd('2026-11-26T12:00:00', 'en-US')).toBe('Nov 26');
   });
 
   it('returns null for a null expiration date', () => {

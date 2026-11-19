@@ -49,7 +49,8 @@ The backend quota is `is_pro` only. RevenueCat's webhook sets `profiles.is_pro`,
   - `src/lib/revenuecatKey.ts` (public SDK key resolution)
   - `src/lib/paywallResult.ts` (hosted paywall result mapping)
   - `src/services/billing.ts` (startup `isPro` fallback)
-  - `src/services/receiptAnalysis.ts` (`SUBSCRIPTION_REQUIRED` handling)
+  - `src/services/receiptAnalysis.ts` (propagates `SUBSCRIPTION_REQUIRED`)
+  - `src/components/AddTransactionSheet.tsx` / `src/components/AnalysisErrorCard.tsx` (`SUBSCRIPTION_REQUIRED` handling)
   - `src/context/AuthContext.tsx` (access token)
 - Backend:
   - `app/api/v1/billing.py` (RevenueCat webhook + entitlement)

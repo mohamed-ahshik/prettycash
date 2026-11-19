@@ -35,6 +35,7 @@ export function ProfileScreen() {
   const { preference, setPreference, colors } = useTheme();
   const {
     isPro,
+    isReady,
     isTrial,
     expirationDate,
     managementURL,
@@ -128,7 +129,7 @@ export function ProfileScreen() {
     try {
       await Linking.openURL(managementURL);
     } catch (error) {
-      console.warn('[Subscription] failed to open management URL', error);
+      console.warn('[RevenueCat] failed to open management URL', error);
       Alert.alert(
         'PrettyCash Pro',
         'Could not open Google Play. Manage your subscription in Play Store > Payments & subscriptions.',
@@ -194,7 +195,7 @@ export function ProfileScreen() {
   }
 
   const activeCount = recurringItems.filter((it) => it.active).length;
-  const trialEnd = formatTrialEnd(expirationDate);
+  const trialEnd = isTrial ? formatTrialEnd(expirationDate) : null;
   const proSubtitle = isTrial
     ? trialEnd
       ? `Trial active, ends ${trialEnd}`
@@ -224,7 +225,17 @@ export function ProfileScreen() {
 
         {/* Subscription */}
         <Text style={[text.overline, styles.sectionHeading]}>Subscription</Text>
-        {isPro ? (
+        {!isReady ? (
+          <View style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
+              <Icon name="crown-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>PrettyCash Pro</Text>
+              <Text style={styles.menuSubtitle}>Checking subscription…</Text>
+            </View>
+          </View>
+        ) : isPro ? (
           <View style={styles.menuRow}>
             <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
               <Icon name="crown-outline" size={20} color={colors.primary} />
@@ -249,10 +260,12 @@ export function ProfileScreen() {
             <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
           </Pressable>
         )}
-        {isPro ? (
+        {isReady && isPro ? (
           <Pressable
             style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
             onPress={() => void handleManageSubscription()}
+            accessibilityRole="button"
+            accessibilityLabel="Manage subscription in Google Play"
           >
             <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
               <Icon name="open-in-new" size={20} color={colors.foreground} />
@@ -261,10 +274,9 @@ export function ProfileScreen() {
               <Text style={styles.menuTitle}>Manage subscription</Text>
               <Text style={styles.menuSubtitle}>Cancel or change in Google Play</Text>
             </View>
-            <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
           </Pressable>
         ) : null}
-        {!isPro ? (
+        {isReady && !isPro ? (
           <Pressable
             style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
             onPress={() => void handleRestorePurchases()}

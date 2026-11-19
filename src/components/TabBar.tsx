@@ -72,13 +72,14 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const compact = width < 340;
   const activeRoute = state.routes[state.index];
   const split = useReceiptPicker();
-  const { canScan, isTrial, expirationDate, openPaywall } = useSubscription();
+  const { canScan, isReady, isTrial, expirationDate, openPaywall } = useSubscription();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [initialImage, setInitialImage] = useState<PickedReceiptImage | null>(null);
   const [startManual, setStartManual] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
 
   const scan = async () => {
+    if (!isReady) return;
     if (!canScan) {
       openPaywall();
       return;
@@ -93,6 +94,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   };
 
   const gallery = async () => {
+    if (!isReady) return;
     if (!canScan) {
       openPaywall();
       return;
