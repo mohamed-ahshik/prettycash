@@ -165,11 +165,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
     const generation = identityGeneration.current;
 
-    const existing = loginPromiseRef.current;
-    if (existing) {
+    let existing = loginPromiseRef.current;
+    while (existing) {
       await existing;
       if (identityGeneration.current !== generation) return false;
       if (identifiedUserId.current === userId) return true;
+      const next = loginPromiseRef.current;
+      if (next === existing) break;
+      existing = next;
     }
 
     const loginPromise = (async () => {
@@ -237,11 +240,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     // Each request applies its own state as soon as it settles. Backend and
     // offerings never hold back CustomerInfo, so a slow response cannot leave
     // the UI gated behind a stale subscription state.
+    let customerInfoApplied = false;
     const customerInfoTask = (async () => {
       try {
         if (!loadCustomerInfo) return;
         const info = await Purchases.getCustomerInfo();
-        if (refreshGeneration.current === generation) setCustomerInfo(info);
+        if (refreshGeneration.current === generation) {
+          setCustomerInfo(info);
+          customerInfoApplied = true;
+          setIsReady(true);
+        }
       } catch (error) {
         console.warn('[RevenueCat] failed to load customer info', error);
       }
@@ -257,10 +265,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           })
       : Promise.resolve();
 
-    // Wait for the fallback and CustomerInfo before declaring readiness, so a
-    // Pro user never flashes as free while one of those sources is pending.
+    // CustomerInfo is authoritative and releases readiness as soon as it
+    // arrives. Only the fallback path waits for the backend, so a Pro user
+    // never flashes as free while that source is pending.
     await Promise.allSettled([backendTask, customerInfoTask]);
-    if (refreshGeneration.current === generation) setIsReady(true);
+    if (refreshGeneration.current === generation && !customerInfoApplied) {
+      setIsReady(true);
+    }
 
     // Offerings are independent and already handled; do not block readiness.
     void offeringsTask;

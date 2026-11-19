@@ -142,7 +142,7 @@ it('identifies the Supabase user and exposes RevenueCat entitlement state', asyn
   expect(text(renderer)).toContain('true:false:true:true');
 });
 
-it('keeps the UI unready until the backend fallback settles', async () => {
+it('releases readiness from CustomerInfo without waiting for the backend', async () => {
   let resolveBackend!: (value: { isPro: boolean }) => void;
   mockFetchEntitlement.mockReturnValue(
     new Promise((resolve) => {
@@ -156,7 +156,30 @@ it('keeps the UI unready until the backend fallback settles', async () => {
     </SubscriptionProvider>,
   );
 
-  expect(text(renderer)).toContain('true:false:false:true');
+  expect(text(renderer)).toContain('true:false:true:true');
+
+  await act(async () => {
+    resolveBackend({ isPro: true });
+  });
+  await flush();
+});
+
+it('waits for the backend fallback when CustomerInfo is unavailable', async () => {
+  let resolveBackend!: (value: { isPro: boolean }) => void;
+  mockPurchases.getCustomerInfo.mockRejectedValue(new Error('offline'));
+  mockFetchEntitlement.mockReturnValue(
+    new Promise((resolve) => {
+      resolveBackend = resolve;
+    }),
+  );
+
+  const renderer = await render(
+    <SubscriptionProvider>
+      <Probe />
+    </SubscriptionProvider>,
+  );
+
+  expect(text(renderer)).toContain('false:false:false:false');
 
   await act(async () => {
     resolveBackend({ isPro: true });
