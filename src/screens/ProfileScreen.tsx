@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AboutModal } from '../components/AboutModal';
 import { AlertBanner } from '../components/AlertBanner';
@@ -14,6 +14,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
+import { formatTrialEnd } from '../lib/entitlement';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
 import { posthog } from '../lib/posthog';
 import { fonts, radii, shadows, text } from '../theme';
@@ -34,12 +35,10 @@ export function ProfileScreen() {
   const { preference, setPreference, colors } = useTheme();
   const {
     isPro,
-    isTrialActive,
-    trialDaysLeft,
-    dailyScansUsed,
-    dailyLimit,
+    isTrial,
+    expirationDate,
+    managementURL,
     openPaywall,
-    openCustomerCenter,
     restorePurchases,
     simulate,
   } = useSubscription();
@@ -125,6 +124,18 @@ export function ProfileScreen() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    try {
+      await Linking.openURL(managementURL);
+    } catch (error) {
+      console.warn('[Subscription] failed to open management URL', error);
+      Alert.alert(
+        'PrettyCash Pro',
+        'Could not open Google Play. Manage your subscription in Play Store > Payments & subscriptions.',
+      );
+    }
+  };
+
   const handleRestorePurchases = async () => {
     setRestoring(true);
     try {
@@ -183,6 +194,12 @@ export function ProfileScreen() {
   }
 
   const activeCount = recurringItems.filter((it) => it.active).length;
+  const trialEnd = formatTrialEnd(expirationDate);
+  const proSubtitle = isTrial
+    ? trialEnd
+      ? `Trial active, ends ${trialEnd}`
+      : 'Trial active'
+    : 'Unlimited AI receipt scans';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -207,25 +224,46 @@ export function ProfileScreen() {
 
         {/* Subscription */}
         <Text style={[text.overline, styles.sectionHeading]}>Subscription</Text>
-        <Pressable
-          style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
-          onPress={isPro ? () => void openCustomerCenter() : openPaywall}
-        >
-          <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
-            <Icon name="crown-outline" size={20} color={colors.primary} />
+        {isPro ? (
+          <View style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
+              <Icon name="crown-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>PrettyCash Pro</Text>
+              <Text style={styles.menuSubtitle}>{proSubtitle}</Text>
+            </View>
           </View>
-          <View style={styles.menuInfo}>
-            <Text style={styles.menuTitle}>PrettyCash Pro</Text>
-            <Text style={styles.menuSubtitle}>
-              {isPro
-                ? 'Manage, cancel, or restore your subscription'
-                : isTrialActive
-                  ? `Trial · ${Math.max(0, trialDaysLeft)} days left · ${Math.max(0, dailyLimit - dailyScansUsed)} scans today`
-                  : 'Unlock unlimited AI receipt scans'}
-            </Text>
-          </View>
-          <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
-        </Pressable>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+            onPress={openPaywall}
+          >
+            <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
+              <Icon name="crown-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>PrettyCash Pro</Text>
+              <Text style={styles.menuSubtitle}>Unlock unlimited AI receipt scans</Text>
+            </View>
+            <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+          </Pressable>
+        )}
+        {isPro ? (
+          <Pressable
+            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+            onPress={() => void handleManageSubscription()}
+          >
+            <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
+              <Icon name="open-in-new" size={20} color={colors.foreground} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>Manage subscription</Text>
+              <Text style={styles.menuSubtitle}>Cancel or change in Google Play</Text>
+            </View>
+            <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+          </Pressable>
+        ) : null}
         {!isPro ? (
           <Pressable
             style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
@@ -257,17 +295,16 @@ export function ProfileScreen() {
           <View style={styles.devBox}>
             <Text style={styles.devTitle}>Developer subscription simulator</Text>
             <View style={styles.devRow}>
-              {[
+              {([
                 ['trial', 'Fresh trial'],
-                ['cap', 'Daily cap'],
                 ['expired', 'Expired'],
                 ['pro', 'Pro'],
                 [null, 'Reset'],
-              ].map(([mode, label]) => (
+              ] as const).map(([mode, label]) => (
                 <Pressable
                   key={label}
                   style={styles.devButton}
-                  onPress={() => simulate(mode as 'trial' | 'cap' | 'expired' | 'pro' | null)}
+                  onPress={() => simulate(mode)}
                 >
                   <Text style={styles.devButtonText}>{label}</Text>
                 </Pressable>

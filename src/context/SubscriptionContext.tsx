@@ -15,23 +15,16 @@ import { Alert, Platform } from 'react-native';
 import { fetchEntitlement, type BackendEntitlement } from '../services/billing';
 import { useAuth } from './AuthContext';
 import { entitlementState } from '../lib/entitlement';
-import {
-  DAILY_TRIAL_SCAN_LIMIT,
-  isScanAllowed,
-  type ScanBlockReason,
-} from '../lib/subscriptionState';
 import { isTestStoreKey, resolveRevenueCatApiKey, type RevenueCatKeyResolution } from '../lib/revenuecatKey';
 import { paywallAction } from '../lib/paywallResult';
 import { PLAY_STORE_SUBSCRIPTIONS_URL } from '../config';
 
-export type SimulationMode = 'trial' | 'cap' | 'expired' | 'pro' | null;
+export type SimulationMode = 'trial' | 'expired' | 'pro' | null;
 
 interface SimulationOverride {
   isPro: boolean;
   isTrial: boolean;
   expirationDate: string | null;
-  isTrialActive: boolean;
-  dailyScansUsed: number;
 }
 
 interface SubscriptionContextValue {
@@ -40,18 +33,10 @@ interface SubscriptionContextValue {
   expirationDate: string | null;
   willRenew: boolean;
   managementURL: string;
-  isTrialActive: boolean;
-  trialDaysLeft: number;
-  trialEndsAt: string | null;
-  dailyScansUsed: number;
-  dailyLimit: number;
-  recordScan: () => void;
   canScan: boolean;
-  scanBlockReason: ScanBlockReason;
   offerings: PurchasesOfferings | null;
   simulation: SimulationMode;
   openPaywall: () => void;
-  openCustomerCenter: () => Promise<void>;
   restorePurchases: () => Promise<boolean>;
   refresh: () => Promise<void>;
   simulate: (mode: SimulationMode) => void;
@@ -123,13 +108,6 @@ function logOutQuietly(): void {
   }
 }
 
-function daysUntil(isoDate: string | null): number {
-  if (!isoDate) return 0;
-  const time = new Date(isoDate).getTime();
-  if (Number.isNaN(time)) return 0;
-  return Math.max(0, Math.ceil((time - Date.now()) / DAY_MS));
-}
-
 function showPaywallUnavailableAlert(onRetry: () => void) {
   Alert.alert(
     'PrettyCash Pro',
@@ -148,7 +126,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [simulation, setSimulation] = useState<SimulationMode>(null);
   const [simulationOverride, setSimulationOverride] = useState<SimulationOverride | null>(null);
   const [backendEntitlement, setBackendEntitlement] = useState<BackendEntitlement | null>(null);
-  const [localScansUsed, setLocalScansUsed] = useState(0);
   const presentingPaywall = useRef(false);
   const hadSession = useRef(false);
   const refreshGeneration = useRef(0);
@@ -161,17 +138,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const expirationDate = simulationOverride?.expirationDate ?? state.expirationDate;
   const willRenew = state.willRenew;
   const managementURL = state.managementURL ?? PLAY_STORE_SUBSCRIPTIONS_URL;
-
-  // Legacy trial fields kept until Task 3 rewrites Profile and TabBar.
-  const isTrialActive = simulationOverride?.isTrialActive ?? isTrial;
-  const trialDaysLeft = isTrialActive ? daysUntil(expirationDate) : 0;
-  const trialEndsAt = expirationDate;
-
-  const dailyScansUsed = simulationOverride?.dailyScansUsed ?? localScansUsed;
-  const dailyLimit = DAILY_TRIAL_SCAN_LIMIT;
-  const scanBlockReason = isScanAllowed({ isPro, isTrialActive, dailyScansUsed, dailyLimit });
-  const canScan = scanBlockReason === 'allowed';
-  const recordScan = useCallback(() => setLocalScansUsed((count) => count + 1), []);
+  const canScan = isPro;
 
   const refresh = useCallback(async () => {
     const generation = refreshGeneration.current + 1;
@@ -291,32 +258,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         isPro: true,
         isTrial: true,
         expirationDate: new Date(Date.now() + 7 * DAY_MS).toISOString(),
-        isTrialActive: true,
-        dailyScansUsed: 0,
-      });
-    } else if (mode === 'cap') {
-      setSimulationOverride({
-        isPro: false,
-        isTrial: true,
-        expirationDate: new Date(Date.now() + 7 * DAY_MS).toISOString(),
-        isTrialActive: true,
-        dailyScansUsed: 3,
       });
     } else if (mode === 'expired') {
       setSimulationOverride({
         isPro: false,
         isTrial: false,
         expirationDate: null,
-        isTrialActive: false,
-        dailyScansUsed: 0,
       });
     } else if (mode === 'pro') {
       setSimulationOverride({
         isPro: true,
         isTrial: false,
         expirationDate: null,
-        isTrialActive: false,
-        dailyScansUsed: 99,
       });
     } else {
       setSimulationOverride(null);
@@ -363,24 +316,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [offerings?.current, refresh]);
 
-  const presentCustomerCenter = useCallback(async (): Promise<void> => {
-    const retry = () => {
-      void presentCustomerCenter();
-    };
-    try {
-      const ui = getRevenueCatUI();
-      if (!ui) {
-        console.warn('[RevenueCat] customer center UI unavailable');
-        showPaywallUnavailableAlert(retry);
-        return;
-      }
-      await ui.default.presentCustomerCenter();
-    } catch (error) {
-      console.warn('[RevenueCat] failed to present customer center', error);
-      showPaywallUnavailableAlert(retry);
-    }
-  }, []);
-
   const value = useMemo<SubscriptionContextValue>(
     () => ({
       isPro,
@@ -388,44 +323,28 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       expirationDate,
       willRenew,
       managementURL,
-      isTrialActive,
-      trialDaysLeft,
-      trialEndsAt,
-      dailyScansUsed,
-      dailyLimit,
       canScan,
-      recordScan,
-      scanBlockReason,
       offerings,
       simulation,
       openPaywall: () => {
         void presentRevenueCatPaywall();
       },
-      openCustomerCenter: presentCustomerCenter,
       restorePurchases,
       refresh,
       simulate,
     }),
     [
       canScan,
-      dailyScansUsed,
-      dailyLimit,
       expirationDate,
       isPro,
       isTrial,
-      isTrialActive,
       managementURL,
       offerings,
-      presentCustomerCenter,
       presentRevenueCatPaywall,
-      recordScan,
       refresh,
       restorePurchases,
-      scanBlockReason,
       simulation,
       simulate,
-      trialDaysLeft,
-      trialEndsAt,
       willRenew,
     ],
   );
