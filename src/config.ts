@@ -17,6 +17,9 @@ const configuredDevLoginOff = process.env.EXPO_PUBLIC_DEV_LOGIN_OFF ?? extra?.de
 
 export const SHOW_AUTH_UI = resolveShowAuthUI(configuredDevLoginOff);
 
+export const PLAY_STORE_SUBSCRIPTIONS_URL =
+  'https://play.google.com/store/account/subscriptions?package=com.mohamedahshik.prettycash';
+
 // Play reviewer account. When this email is entered on the login screen, a
 // password field replaces the magic-link flow. Everyone else keeps OTP.
 export const REVIEWER_EMAIL = process.env.EXPO_PUBLIC_TEST_EMAIL ?? '';

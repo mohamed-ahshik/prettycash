@@ -14,24 +14,32 @@ import Purchases, {
 import { Alert, Platform } from 'react-native';
 import { fetchEntitlement, type BackendEntitlement } from '../services/billing';
 import { useAuth } from './AuthContext';
+import { entitlementState } from '../lib/entitlement';
 import {
-  deriveTrial,
+  DAILY_TRIAL_SCAN_LIMIT,
   isScanAllowed,
   type ScanBlockReason,
 } from '../lib/subscriptionState';
 import { isTestStoreKey, resolveRevenueCatApiKey, type RevenueCatKeyResolution } from '../lib/revenuecatKey';
 import { paywallAction } from '../lib/paywallResult';
+import { PLAY_STORE_SUBSCRIPTIONS_URL } from '../config';
 
 export type SimulationMode = 'trial' | 'cap' | 'expired' | 'pro' | null;
 
 interface SimulationOverride {
   isPro: boolean;
+  isTrial: boolean;
+  expirationDate: string | null;
   isTrialActive: boolean;
   dailyScansUsed: number;
 }
 
 interface SubscriptionContextValue {
   isPro: boolean;
+  isTrial: boolean;
+  expirationDate: string | null;
+  willRenew: boolean;
+  managementURL: string;
   isTrialActive: boolean;
   trialDaysLeft: number;
   trialEndsAt: string | null;
@@ -51,6 +59,7 @@ interface SubscriptionContextValue {
 
 const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(undefined);
 const ENTITLEMENT_ID = 'prettycash_pro';
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 let configuredApiKey: string | null = null;
 let revenueCatUI: typeof import('react-native-purchases-ui') | null | undefined;
@@ -77,6 +86,49 @@ function getApiKey(): RevenueCatKeyResolution {
   });
 }
 
+function ensureConfigured(): string | null {
+  const { apiKey } = getApiKey();
+  if (apiKey === null) {
+    console.warn('[RevenueCat] API key is not configured for this platform.');
+    return null;
+  }
+
+  if (configuredApiKey !== apiKey) {
+    if (!__DEV__ && isTestStoreKey(apiKey)) {
+      console.warn(
+        '[RevenueCat] Using a Test Store key in a release build. ' +
+          'Purchases will not be billed. Replace it with a live store key before publishing.',
+      );
+    }
+    try {
+      Purchases.configure({ apiKey });
+      configuredApiKey = apiKey;
+    } catch (error) {
+      console.warn('[RevenueCat] failed to configure', error);
+      return null;
+    }
+  }
+
+  return apiKey;
+}
+
+function logOutQuietly(): void {
+  try {
+    void Purchases.logOut().catch((error) => {
+      console.warn('[RevenueCat] failed to log out', error);
+    });
+  } catch (error) {
+    console.warn('[RevenueCat] failed to log out', error);
+  }
+}
+
+function daysUntil(isoDate: string | null): number {
+  if (!isoDate) return 0;
+  const time = new Date(isoDate).getTime();
+  if (Number.isNaN(time)) return 0;
+  return Math.max(0, Math.ceil((time - Date.now()) / DAY_MS));
+}
+
 function showPaywallUnavailableAlert(onRetry: () => void) {
   Alert.alert(
     'PrettyCash Pro',
@@ -98,80 +150,83 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [localScansUsed, setLocalScansUsed] = useState(0);
   const presentingPaywall = useRef(false);
 
+  const state = entitlementState(customerInfo, ENTITLEMENT_ID);
   const isPro =
     simulationOverride?.isPro ??
-    (customerInfo?.entitlements.active[ENTITLEMENT_ID] != null || Boolean(backendEntitlement?.isPro));
-  const trial = deriveTrial(session?.user.created_at, new Date(), isPro);
-  const isTrialActive =
-    simulationOverride?.isTrialActive ?? backendEntitlement?.inTrial ?? trial.isTrialActive;
-  const trialDaysLeft =
-    simulation === 'trial' || simulation === 'cap'
-      ? 7
-      : backendEntitlement?.trialDaysLeft ?? trial.trialDaysLeft;
-  const dailyScansUsed =
-    simulationOverride?.dailyScansUsed ?? backendEntitlement?.dailyScansUsed ?? localScansUsed;
-  const dailyLimit = backendEntitlement?.dailyLimit ?? 3;
+    (customerInfo ? state.isPro : Boolean(backendEntitlement?.isPro));
+  const isTrial = simulationOverride?.isTrial ?? state.isTrial;
+  const expirationDate = simulationOverride?.expirationDate ?? state.expirationDate;
+  const willRenew = state.willRenew;
+  const managementURL = state.managementURL ?? PLAY_STORE_SUBSCRIPTIONS_URL;
+
+  // Legacy trial fields kept until Task 3 rewrites Profile and TabBar.
+  const isTrialActive = simulationOverride?.isTrialActive ?? isTrial;
+  const trialDaysLeft = isTrialActive ? daysUntil(expirationDate) : 0;
+  const trialEndsAt = expirationDate;
+
+  const dailyScansUsed = simulationOverride?.dailyScansUsed ?? localScansUsed;
+  const dailyLimit = DAILY_TRIAL_SCAN_LIMIT;
   const scanBlockReason = isScanAllowed({ isPro, isTrialActive, dailyScansUsed, dailyLimit });
   const canScan = scanBlockReason === 'allowed';
   const recordScan = useCallback(() => setLocalScansUsed((count) => count + 1), []);
 
   const refresh = useCallback(async () => {
-    if (!session?.user) return;
-    try {
-      const backend = await fetchEntitlement();
-      setBackendEntitlement(backend);
-    } catch {
-      setBackendEntitlement(null);
-    }
+    if (ensureConfigured() === null) return;
 
-    const resolution = getApiKey();
-    if (resolution.apiKey === null) {
-      console.warn('[RevenueCat] API key is not configured for this platform.');
-      return;
-    }
-    const apiKey = resolution.apiKey;
-
-    if (!__DEV__ && isTestStoreKey(apiKey)) {
-      console.warn(
-        '[RevenueCat] Using a Test Store key in a release build. ' +
-          'Purchases will not be billed. Replace it with a live store key before publishing.',
-      );
-    }
-
-    try {
-      if (configuredApiKey !== apiKey) {
-        Purchases.configure({
-          apiKey,
-          appUserID: session.user.id,
-        });
-        configuredApiKey = apiKey;
-      } else {
-        await Purchases.logIn(session.user.id);
+    const user = session?.user;
+    if (user) {
+      try {
+        await Purchases.logIn(user.id);
+      } catch (error) {
+        console.warn('[RevenueCat] failed to log in', error);
       }
-      const [info, nextOfferings] = await Promise.all([
-        Purchases.getCustomerInfo(),
-        Purchases.getOfferings(),
-      ]);
-      setCustomerInfo(info);
-      setOfferings(nextOfferings);
-    } catch (error) {
-      console.warn('[RevenueCat] failed to load subscriptions', error);
+    }
+
+    const [backendResult, customerInfoResult, offeringsResult] = await Promise.allSettled([
+      fetchEntitlement(),
+      Purchases.getCustomerInfo(),
+      Purchases.getOfferings(),
+    ]);
+
+    if (backendResult.status === 'fulfilled') {
+      setBackendEntitlement(backendResult.value);
+    } else {
+      console.warn('[RevenueCat] failed to load backend entitlement', backendResult.reason);
+    }
+
+    if (customerInfoResult.status === 'fulfilled') {
+      setCustomerInfo(customerInfoResult.value);
+    } else {
+      console.warn('[RevenueCat] failed to load customer info', customerInfoResult.reason);
+    }
+
+    if (offeringsResult.status === 'fulfilled') {
+      setOfferings(offeringsResult.value);
+    } else {
+      console.warn('[RevenueCat] failed to load offerings', offeringsResult.reason);
     }
   }, [session?.user]);
 
   useEffect(() => {
+    const apiKey = ensureConfigured();
+
     if (!session?.user) {
       setCustomerInfo(null);
       setOfferings(null);
       setBackendEntitlement(null);
+      logOutQuietly();
       return;
     }
-    void refresh();
+
+    if (apiKey === null) return;
+
+    void refresh().catch((error) => {
+      console.warn('[RevenueCat] failed to refresh subscription state', error);
+    });
 
     const listener = (info: CustomerInfo) => {
       setCustomerInfo(info);
     };
-    if (getApiKey().apiKey === null) return;
     Purchases.addCustomerInfoUpdateListener(listener);
 
     return () => {
@@ -188,13 +243,37 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const simulate = useCallback((mode: SimulationMode) => {
     setSimulation(mode);
     if (mode === 'trial') {
-      setSimulationOverride({ isPro: false, isTrialActive: true, dailyScansUsed: 0 });
+      setSimulationOverride({
+        isPro: true,
+        isTrial: true,
+        expirationDate: new Date(Date.now() + 7 * DAY_MS).toISOString(),
+        isTrialActive: true,
+        dailyScansUsed: 0,
+      });
     } else if (mode === 'cap') {
-      setSimulationOverride({ isPro: false, isTrialActive: true, dailyScansUsed: 3 });
+      setSimulationOverride({
+        isPro: false,
+        isTrial: true,
+        expirationDate: new Date(Date.now() + 7 * DAY_MS).toISOString(),
+        isTrialActive: true,
+        dailyScansUsed: 3,
+      });
     } else if (mode === 'expired') {
-      setSimulationOverride({ isPro: false, isTrialActive: false, dailyScansUsed: 0 });
+      setSimulationOverride({
+        isPro: false,
+        isTrial: false,
+        expirationDate: null,
+        isTrialActive: false,
+        dailyScansUsed: 0,
+      });
     } else if (mode === 'pro') {
-      setSimulationOverride({ isPro: true, isTrialActive: false, dailyScansUsed: 99 });
+      setSimulationOverride({
+        isPro: true,
+        isTrial: false,
+        expirationDate: null,
+        isTrialActive: false,
+        dailyScansUsed: 99,
+      });
     } else {
       setSimulationOverride(null);
     }
@@ -261,9 +340,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const value = useMemo<SubscriptionContextValue>(
     () => ({
       isPro,
+      isTrial,
+      expirationDate,
+      willRenew,
+      managementURL,
       isTrialActive,
       trialDaysLeft,
-      trialEndsAt: trial.trialEndsAt,
+      trialEndsAt,
       dailyScansUsed,
       dailyLimit,
       canScan,
@@ -282,21 +365,24 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     [
       canScan,
       dailyScansUsed,
-      recordScan,
       dailyLimit,
+      expirationDate,
       isPro,
+      isTrial,
       isTrialActive,
+      managementURL,
       offerings,
       presentCustomerCenter,
       presentRevenueCatPaywall,
+      recordScan,
       refresh,
       restorePurchases,
       scanBlockReason,
       simulation,
       simulate,
-      trial.trialEndsAt,
       trialDaysLeft,
-      backendEntitlement,
+      trialEndsAt,
+      willRenew,
     ],
   );
 

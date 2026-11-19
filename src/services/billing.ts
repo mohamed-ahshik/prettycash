@@ -3,12 +3,6 @@ import { supabase } from '../lib/supabase';
 
 export interface BackendEntitlement {
   isPro: boolean;
-  inTrial: boolean;
-  trialDaysLeft: number;
-  dailyScansUsed: number;
-  dailyLimit: number;
-  canScan: boolean;
-  blockReason: 'subscription_required' | 'daily_trial_limit' | null;
 }
 
 export async function fetchEntitlement(): Promise<BackendEntitlement> {

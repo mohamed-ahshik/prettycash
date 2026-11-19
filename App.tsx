@@ -55,7 +55,9 @@ export default function App() {
       <ThemeProvider>
         <CurrencyProvider>
           <AuthProvider>
-            <Gate />
+            <SubscriptionProvider>
+              <Gate />
+            </SubscriptionProvider>
           </AuthProvider>
         </CurrencyProvider>
       </ThemeProvider>
@@ -100,8 +102,7 @@ function Gate() {
 
   return (
     <Bootstrap>
-      <SubscriptionProvider>
-        <SafeAreaProvider>
+      <SafeAreaProvider>
         <CategoriesProvider>
           <TransactionsProvider>
             <PendingRecurringProvider>
@@ -111,8 +112,7 @@ function Gate() {
             </PendingRecurringProvider>
           </TransactionsProvider>
         </CategoriesProvider>
-        </SafeAreaProvider>
-      </SubscriptionProvider>
+      </SafeAreaProvider>
     </Bootstrap>
   );
 }
