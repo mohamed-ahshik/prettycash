@@ -113,6 +113,7 @@ function ensureConfigured(): string | null {
 }
 
 function logOutQuietly(): void {
+  if (configuredApiKey === null) return;
   try {
     void Purchases.logOut().catch((error) => {
       console.warn('[RevenueCat] failed to log out', error);
@@ -141,7 +142,7 @@ function showPaywallUnavailableAlert(onRetry: () => void) {
 }
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
   const [simulation, setSimulation] = useState<SimulationMode>(null);
@@ -149,6 +150,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [backendEntitlement, setBackendEntitlement] = useState<BackendEntitlement | null>(null);
   const [localScansUsed, setLocalScansUsed] = useState(0);
   const presentingPaywall = useRef(false);
+  const hadSession = useRef(false);
+  const refreshGeneration = useRef(0);
 
   const state = entitlementState(customerInfo, ENTITLEMENT_ID);
   const isPro =
@@ -171,22 +174,49 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const recordScan = useCallback(() => setLocalScansUsed((count) => count + 1), []);
 
   const refresh = useCallback(async () => {
-    if (ensureConfigured() === null) return;
+    const generation = refreshGeneration.current + 1;
+    refreshGeneration.current = generation;
 
+    const apiKey = ensureConfigured();
     const user = session?.user;
-    if (user) {
+    if (!user) return;
+
+    let loginFailed = false;
+    if (apiKey !== null) {
       try {
         await Purchases.logIn(user.id);
       } catch (error) {
+        loginFailed = true;
         console.warn('[RevenueCat] failed to log in', error);
       }
     }
 
+    // A newer refresh (new session or explicit retry) supersedes this one.
+    if (refreshGeneration.current !== generation) return;
+
+    const loadCustomerInfo = apiKey !== null && !loginFailed;
+    const loadOfferings = apiKey !== null;
+
+    if (!loadCustomerInfo) {
+      // Do not retain a previous user's CustomerInfo; the backend isPro
+      // fallback applies until the SDK can identify the current user.
+      setCustomerInfo(null);
+    }
+
+    const customerInfoPromise: Promise<CustomerInfo | null> = loadCustomerInfo
+      ? Purchases.getCustomerInfo()
+      : Promise.resolve(null);
+    const offeringsPromise: Promise<PurchasesOfferings | null> = loadOfferings
+      ? Purchases.getOfferings()
+      : Promise.resolve(null);
+
     const [backendResult, customerInfoResult, offeringsResult] = await Promise.allSettled([
       fetchEntitlement(),
-      Purchases.getCustomerInfo(),
-      Purchases.getOfferings(),
+      customerInfoPromise,
+      offeringsPromise,
     ]);
+
+    if (refreshGeneration.current !== generation) return;
 
     if (backendResult.status === 'fulfilled') {
       setBackendEntitlement(backendResult.value);
@@ -195,13 +225,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     if (customerInfoResult.status === 'fulfilled') {
-      setCustomerInfo(customerInfoResult.value);
+      if (customerInfoResult.value !== null) {
+        setCustomerInfo(customerInfoResult.value);
+      }
     } else {
       console.warn('[RevenueCat] failed to load customer info', customerInfoResult.reason);
     }
 
     if (offeringsResult.status === 'fulfilled') {
-      setOfferings(offeringsResult.value);
+      if (offeringsResult.value !== null) {
+        setOfferings(offeringsResult.value);
+      }
     } else {
       console.warn('[RevenueCat] failed to load offerings', offeringsResult.reason);
     }
@@ -210,19 +244,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const apiKey = ensureConfigured();
 
+    // Auth has not resolved yet. Configuration must still run at startup, but
+    // clearing state or logging out now would race session restoration.
+    if (loading) return;
+
     if (!session?.user) {
+      refreshGeneration.current += 1;
       setCustomerInfo(null);
       setOfferings(null);
       setBackendEntitlement(null);
-      logOutQuietly();
+      if (hadSession.current) {
+        hadSession.current = false;
+        logOutQuietly();
+      }
       return;
     }
 
-    if (apiKey === null) return;
+    hadSession.current = true;
 
     void refresh().catch((error) => {
       console.warn('[RevenueCat] failed to refresh subscription state', error);
     });
+
+    if (apiKey === null) return;
 
     const listener = (info: CustomerInfo) => {
       setCustomerInfo(info);
@@ -232,7 +276,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return () => {
       Purchases.removeCustomerInfoUpdateListener(listener);
     };
-  }, [session?.user, refresh]);
+  }, [session?.user, loading, refresh]);
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     const next = await Purchases.restorePurchases();
