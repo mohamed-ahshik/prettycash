@@ -59,6 +59,7 @@ flowchart TB
 | 07 | Insights | [[07-insights]] | [[2026-09-12-insights-screen]] · [[2026-09-18-insights-combined-donut]] | [[2026-09-12-insights-screen-design]] · [[2026-09-18-insights-combined-donut-design]] · [[2026-09-18-insights-long-lists-design]] |
 | 08 | Categories | [[08-categories]] | [[2026-09-12-categories-screen]] | [[2026-09-12-categories-screen-design]] |
 | 09 | Profile and recurring | [[09-profile-recurring]] | [[2026-09-12-profile-and-recurring]] · [[2026-10-31-recurring-transactions-edge-function]] | [[2026-09-12-profile-and-recurring-design]] · [[2026-10-31-recurring-transactions-edge-function-design]] |
+| 10 | Subscriptions | [[10-subscriptions]] | Spec only; plan pending | [[2026-10-31-google-play-subscriptions-design]] |
 
 ## 5. Core runtime flows
 

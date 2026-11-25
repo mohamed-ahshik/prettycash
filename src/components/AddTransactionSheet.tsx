@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useCategories } from '../context/CategoriesContext';
 import { useMonth } from '../context/MonthContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { getProfile } from '../data/repositories/profileRepo';
 import { uploadReceipt } from '../data/repositories/storageRepo';
@@ -60,6 +61,7 @@ export function AddTransactionSheet({
   const { addTransaction } = useTransactions();
   const { expenseCategories } = useCategories();
   const { setMonth } = useMonth();
+  const { isPro, openPaywall } = useSubscription();
   const [flow, setFlow] = useState<Flow>('form');
   const [draft, setDraft] = useState<ReceiptDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,12 @@ export function AddTransactionSheet({
   const [slowWait, setSlowWait] = useState(false);
   const [analysisErrorKind, setAnalysisErrorKind] = useState<AnalysisErrorKind | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
+
+  useEffect(() => {
+    if (isPro && analysisErrorKind === 'subscription-required') {
+      setAnalysisErrorKind('subscription');
+    }
+  }, [isPro, analysisErrorKind]);
   const requestToken = useRef(0);
   const startKey = useRef<string | null>(null);
   const startingRef = useRef(false);
@@ -130,7 +138,9 @@ export function AddTransactionSheet({
     setError(null);
 
     let kind: AnalysisErrorKind;
-    if (analysisError?.code === 'NOT_A_RECEIPT') {
+    if (analysisError?.code === 'SUBSCRIPTION_REQUIRED') {
+      kind = isPro ? 'subscription' : 'subscription-required';
+    } else if (analysisError?.code === 'NOT_A_RECEIPT') {
       kind = 'rejected';
     } else if (analysisError?.code === 'FAILED') {
       kind = 'failed';
@@ -276,6 +286,10 @@ export function AddTransactionSheet({
   };
 
   const handleErrorAction = (action: AnalysisErrorAction) => {
+    if (action === 'upgrade') {
+      openPaywall();
+      return;
+    }
     if (action === 'scan-again') {
       handleRetake();
       return;

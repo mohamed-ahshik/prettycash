@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AboutModal } from '../components/AboutModal';
 import { AlertBanner } from '../components/AlertBanner';
@@ -10,9 +10,11 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import type { SegmentedControlOption } from '../components/SegmentedControl';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { getProfile, upsertProfile } from '../data/repositories/profileRepo';
 import { deleteRecurring, insertRecurring, listRecurring, setRecurringActive } from '../data/repositories/recurringRepo';
+import { formatTrialEnd } from '../lib/entitlement';
 import { hapticSelection, setHapticsEnabled } from '../lib/haptics';
 import { posthog } from '../lib/posthog';
 import { fonts, radii, shadows, text } from '../theme';
@@ -31,10 +33,21 @@ export function ProfileScreen() {
   const { session, signOut } = useAuth();
   const { setCurrency } = useCurrency();
   const { preference, setPreference, colors } = useTheme();
+  const {
+    isPro,
+    isReady,
+    isTrial,
+    expirationDate,
+    managementURL,
+    openPaywall,
+    restorePurchases,
+    simulate,
+  } = useSubscription();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [recurringVisible, setRecurringVisible] = useState(false);
@@ -112,6 +125,37 @@ export function ProfileScreen() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    try {
+      await Linking.openURL(managementURL);
+    } catch (error) {
+      console.warn('[RevenueCat] failed to open management URL', error);
+      Alert.alert(
+        'PrettyCash Pro',
+        'Could not open Google Play. Manage your subscription in Play Store > Payments & subscriptions.',
+      );
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    setRestoring(true);
+    try {
+      const restored = await restorePurchases();
+      Alert.alert(
+        'PrettyCash Pro',
+        restored ? 'Purchases restored.' : 'No active subscription found.',
+      );
+    } catch (error) {
+      console.warn('[RevenueCat] failed to restore purchases', error);
+      Alert.alert(
+        'PrettyCash Pro',
+        'Could not restore purchases. Please try again later.',
+      );
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -151,6 +195,12 @@ export function ProfileScreen() {
   }
 
   const activeCount = recurringItems.filter((it) => it.active).length;
+  const trialEnd = isTrial ? formatTrialEnd(expirationDate) : null;
+  const proSubtitle = isTrial
+    ? trialEnd
+      ? `Trial active, ends ${trialEnd}`
+      : 'Trial active'
+    : 'Unlimited AI receipt scans';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -172,6 +222,108 @@ export function ProfileScreen() {
           </Text>
           <Text style={styles.userSubtitle}>Member since {profile.memberSince}</Text>
         </View>
+
+        {/* Subscription */}
+        <Text style={[text.overline, styles.sectionHeading]}>Subscription</Text>
+        {!isReady ? (
+          <View style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
+              <Icon name="crown-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>PrettyCash Pro</Text>
+              <Text style={styles.menuSubtitle}>Checking subscription…</Text>
+            </View>
+          </View>
+        ) : isPro ? (
+          <View style={styles.menuRow}>
+            <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
+              <Icon name="crown-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>PrettyCash Pro</Text>
+              <Text style={styles.menuSubtitle}>{proSubtitle}</Text>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+            onPress={openPaywall}
+          >
+            <View style={[styles.menuIconBox, { backgroundColor: colors.secondary }]}>
+              <Icon name="crown-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>PrettyCash Pro</Text>
+              <Text style={styles.menuSubtitle}>Unlock unlimited AI receipt scans</Text>
+            </View>
+            <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+          </Pressable>
+        )}
+        {isReady && isPro ? (
+          <Pressable
+            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+            onPress={() => void handleManageSubscription()}
+            accessibilityRole="button"
+            accessibilityLabel="Manage subscription in Google Play"
+          >
+            <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
+              <Icon name="open-in-new" size={20} color={colors.foreground} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>Manage subscription</Text>
+              <Text style={styles.menuSubtitle}>Cancel or change in Google Play</Text>
+            </View>
+          </Pressable>
+        ) : null}
+        {isReady && !isPro ? (
+          <Pressable
+            style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+            onPress={() => void handleRestorePurchases()}
+            disabled={restoring}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: restoring, busy: restoring }}
+          >
+            <View style={[styles.menuIconBox, { backgroundColor: colors.muted }]}>
+              <Icon name="restore" size={20} color={colors.foreground} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>Restore Purchases</Text>
+              <Text style={styles.menuSubtitle}>
+                {restoring
+                  ? 'Checking your subscriptions…'
+                  : 'Already subscribed on another device?'}
+              </Text>
+            </View>
+            {restoring ? (
+              <ActivityIndicator size="small" color={colors.mutedForeground} />
+            ) : (
+              <Icon name="chevron-right" size={20} color={colors.mutedForeground} />
+            )}
+          </Pressable>
+        ) : null}
+
+        {__DEV__ ? (
+          <View style={styles.devBox}>
+            <Text style={styles.devTitle}>Developer subscription simulator</Text>
+            <View style={styles.devRow}>
+              {([
+                ['trial', 'Fresh trial'],
+                ['expired', 'Expired'],
+                ['pro', 'Pro'],
+                [null, 'Reset'],
+              ] as const).map(([mode, label]) => (
+                <Pressable
+                  key={label}
+                  style={styles.devButton}
+                  onPress={() => simulate(mode)}
+                >
+                  <Text style={styles.devButtonText}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Recurring Section */}
         <Text style={[text.overline, styles.sectionHeading]}>Schedule</Text>
@@ -241,7 +393,8 @@ export function ProfileScreen() {
               <View style={styles.settingText}>
                 <Text style={styles.settingLabel}>Auto-categorize receipts</Text>
                 <Text style={styles.settingHint}>
-                  Gemini picks one of your expense categories from the receipt.
+                  AI will pick one of your expense categories. If undetermined, it will default to
+                  Uncategorized.
                 </Text>
               </View>
             </View>
@@ -270,6 +423,7 @@ export function ProfileScreen() {
                 }}
                 options={APPEARANCE_OPTIONS}
                 style={styles.appearanceSegment}
+                compact
               />
             </View>
           </View>
@@ -515,5 +669,38 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  devBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.muted,
+  },
+  devTitle: {
+    fontSize: 11,
+    fontFamily: fonts.semibold,
+    color: colors.mutedForeground,
+    marginBottom: 8,
+  },
+  devRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  devButton: {
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  devButtonText: {
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    color: colors.foreground,
   },
 });

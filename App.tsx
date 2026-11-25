@@ -18,6 +18,7 @@ import { CurrencyProvider, useCurrency } from './src/context/CurrencyContext';
 import { CategoriesProvider } from './src/context/CategoriesContext';
 import { MonthProvider } from './src/context/MonthContext';
 import { PendingRecurringProvider } from './src/context/PendingRecurringContext';
+import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import { ThemeProvider, useTheme, useThemedStyles } from './src/context/ThemeContext';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { getProfile, upsertProfile, updateProfileTimezone } from './src/data/repositories/profileRepo';
@@ -31,7 +32,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { InsightsScreen } from './src/screens/InsightsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { fonts, radii } from './src/theme';
+import { fonts, lightColors, radii } from './src/theme';
 import type { ThemeColors } from './src/theme';
 import { getErrorMessage } from './src/utils/errorMessage';
 
@@ -54,7 +55,9 @@ export default function App() {
       <ThemeProvider>
         <CurrencyProvider>
           <AuthProvider>
-            <Gate />
+            <SubscriptionProvider>
+              <Gate />
+            </SubscriptionProvider>
           </AuthProvider>
         </CurrencyProvider>
       </ThemeProvider>
@@ -220,15 +223,12 @@ function AuthError({ error, onRetry }: { error: string; onRetry: () => void }) {
 }
 
 function Splash() {
-  const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
-
   return (
-    <Animated.View style={styles.splash} entering={FadeIn.duration(320)}>
-      <View style={styles.splashLogo}>
+    <Animated.View style={splashStyles.splash} entering={FadeIn.duration(320)}>
+      <View style={splashStyles.splashLogo}>
         <BrandMark size={58} />
       </View>
-      <ActivityIndicator size="small" color={colors.mutedForeground} />
+      <ActivityIndicator size="small" color={lightColors.mutedForeground} />
     </Animated.View>
   );
 }
@@ -313,22 +313,25 @@ const rootStyles = StyleSheet.create({
   },
 });
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+const splashStyles = StyleSheet.create({
   splash: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 20,
-    backgroundColor: colors.background,
+    backgroundColor: lightColors.background,
   },
   splashLogo: {
     width: 72,
     height: 72,
     borderRadius: 22,
-    backgroundColor: colors.secondary,
+    backgroundColor: lightColors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
+});
+
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   errorWrap: {
     flex: 1,
     alignItems: 'center',

@@ -188,3 +188,9 @@ For iOS, the equivalent pieces will be an iOS OAuth client with the bundle ID, t
 - EAS config: `eas.json`, `app.config.ts`
 - Google env: `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
 - iOS env (deferred): `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+
+---
+
+## 11. See also
+
+- [02 — Google OAuth Clients and Play App Signing](./02-google-oauth-clients-and-play-app-signing.md) — why both a Web and an Android client are required, why only the Web client has a secret, and how to register the Google Play App Signing SHA-1.

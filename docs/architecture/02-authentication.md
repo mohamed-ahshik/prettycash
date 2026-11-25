@@ -22,7 +22,8 @@ Own user authentication, session restoration, identity propagation, and login su
 - `src/context/AuthContext.tsx` — session state, auth actions, deep-link handling, PostHog identity.
 - `src/context/session.ts` — initial session/anonymous-session resolution.
 - `src/lib/supabase.ts` — Supabase client, PKCE, storage adapter.
-- `src/screens/LoginScreen.tsx` — email, Google, and Facebook entry points.
+- `src/lib/reviewerEmail.ts` — identifies the Play reviewer account.
+- `src/screens/LoginScreen.tsx` — email, Google, Facebook, and reviewer entry points.
 - `src/services/googleAuth.ts` — native Google SDK → Supabase ID-token exchange.
 - `src/lib/notifications.ts` — push-token cleanup on sign-out.
 - `src/config.ts` — `SHOW_AUTH_UI` and backend URL resolution.
@@ -78,6 +79,19 @@ email → supabase.auth.signInWithOtp
 - Missing native module in Expo Go produces a development-build-required error.
 - Deep-link errors set `authError`.
 - Initial session failures surface through the bootstrap/auth error surface.
+
+## Play reviewer sign-in
+
+Normal accounts use the email magic link and never have a password. The single reviewer account is identified by `EXPO_PUBLIC_TEST_EMAIL`:
+
+```text
+typed email == reviewer email  → password field appears → signInWithPassword
+any other email                → signInWithOtp (unchanged)
+```
+
+`src/lib/reviewerEmail.ts` compares normalized addresses. The password is typed by the reviewer and never stored or bundled; only the reviewer email ships in the build.
+
+Create the reviewer account in Supabase, confirm its email and set a password, then enter the same credentials under **Play Console → App access**. Use a dedicated account with no real user data and no admin rights.
 
 ## Development login bypass
 

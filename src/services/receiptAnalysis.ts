@@ -115,14 +115,29 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function visionConfig(): { root: string; authHeader: Record<string, string> } {
+async function visionConfig(): Promise<{
+  root: string;
+  authHeader: Record<string, string>;
+}> {
   const { baseUrl, apiKey } = getVisionConfig();
   if (!baseUrl || !apiKey) {
     throw new ReceiptAnalysisError('NOT_CONFIGURED', 'Vision backend is not configured.');
   }
+  const { supabase } = require('../lib/supabase') as typeof import('../lib/supabase');
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) {
+    throw new ReceiptAnalysisError(
+      'NOT_AUTHENTICATED',
+      'A signed-in session is required to analyze receipts.',
+    );
+  }
   return {
     root: baseUrl.replace(/\/$/, ''),
-    authHeader: { Authorization: `Bearer ${apiKey}` },
+    authHeader: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-API-Key': apiKey,
+    },
   };
 }
 
@@ -274,7 +289,7 @@ export async function analyzeReceipt(
   });
 
   try {
-    const { root, authHeader } = visionConfig();
+    const { root, authHeader } = await visionConfig();
     const headers: Record<string, string> = {
       ...authHeader,
       'Content-Type': 'application/json',
@@ -342,6 +357,6 @@ export async function resumeReceiptAnalysis(
   jobId: string,
   options: Pick<AnalyzeOptions, 'onPollRetry'> = {},
 ): Promise<AnalyzedReceipt> {
-  const { root, authHeader } = visionConfig();
+  const { root, authHeader } = await visionConfig();
   return pollUntilDone(jobId, root, authHeader, options.onPollRetry);
 }

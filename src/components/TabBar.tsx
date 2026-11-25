@@ -1,13 +1,15 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSubscription } from '../context/SubscriptionContext';
 import { useTheme, useThemedStyles } from '../context/ThemeContext';
 import { useReceiptPicker } from '../hooks/useReceiptPicker';
 import { fonts, radii, shadows } from '../theme';
 import type { ThemeColors } from '../theme';
 import { motion } from '../theme/motion';
+import { formatTrialEnd } from '../lib/entitlement';
 import { hapticSelection } from '../lib/haptics';
 import type { PickedReceiptImage } from '../services/receiptPicker';
 import { AddTransactionSheet } from './AddTransactionSheet';
@@ -70,12 +72,22 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const compact = width < 340;
   const activeRoute = state.routes[state.index];
   const split = useReceiptPicker();
+  const { canScan, isReady, isTrial, expirationDate, openPaywall } = useSubscription();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [initialImage, setInitialImage] = useState<PickedReceiptImage | null>(null);
   const [startManual, setStartManual] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
 
   const scan = async () => {
+    if (!isReady) {
+      Alert.alert('PrettyCash Pro', 'Checking your subscription. Please try again in a moment.');
+      return;
+    }
+    if (!canScan) {
+      openPaywall();
+      return;
+    }
+
     split.clearError();
     const image = await split.pickFromCamera();
     if (!image) return;
@@ -85,6 +97,15 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   };
 
   const gallery = async () => {
+    if (!isReady) {
+      Alert.alert('PrettyCash Pro', 'Checking your subscription. Please try again in a moment.');
+      return;
+    }
+    if (!canScan) {
+      openPaywall();
+      return;
+    }
+
     split.clearError();
     const image = await split.pickFromGallery();
     if (!image) return;
@@ -150,8 +171,15 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     );
   };
 
+  const trialEnd = isTrial ? formatTrialEnd(expirationDate) : null;
+
   return (
     <View style={[styles.wrapper, compact && styles.wrapperCompact, { bottom: insets.bottom + 20 }]}>
+      {trialEnd ? (
+        <View style={styles.trialBadge}>
+          <Text style={styles.trialBadgeText}>Trial ends {trialEnd}</Text>
+        </View>
+      ) : null}
       {renderTab('Home')}
       {renderTab('Insights')}
       <SplitAddButton
@@ -186,6 +214,20 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  trialBadge: {
+    position: 'absolute',
+    top: -26,
+    alignSelf: 'center',
+    backgroundColor: colors.foreground,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+  },
+  trialBadgeText: {
+    color: colors.background,
+    fontSize: 10,
+    fontFamily: fonts.semibold,
+  },
   wrapper: {
     position: 'absolute',
     left: 20,

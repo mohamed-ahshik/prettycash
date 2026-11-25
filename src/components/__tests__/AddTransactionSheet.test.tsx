@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
 import TestRenderer, { act } from 'react-test-renderer';
 
 let mockAction = 'retry-checking';
+const mockSubscription = { isPro: true, openPaywall: jest.fn() };
 
 jest.mock('../../context/CategoriesContext', () => ({
   useCategories: () => ({
@@ -12,6 +13,9 @@ jest.mock('../../context/CategoriesContext', () => ({
   }),
 }));
 jest.mock('../../context/MonthContext', () => ({ useMonth: () => ({ setMonth: jest.fn() }) }));
+jest.mock('../../context/SubscriptionContext', () => ({
+  useSubscription: () => mockSubscription,
+}));
 jest.mock('../../context/TransactionsContext', () => ({
   useTransactions: () => ({ addTransaction: jest.fn() }),
 }));
@@ -67,23 +71,6 @@ jest.mock('../AnalysisProgress', () => {
     }) => <Text>{`progress:${stage}:${slowWait}:${reconnecting}`}</Text>,
   };
 });
-jest.mock('../AnalysisErrorCard', () => {
-  const { Pressable, Text } = require('react-native');
-  return {
-    AnalysisErrorCard: ({
-      kind,
-      onAction,
-    }: {
-      kind: string;
-      onAction: (action: string) => void;
-    }) => (
-      <>
-        <Text>{`error:${kind}`}</Text>
-        <Pressable testID="mock-error-action" onPress={() => onAction(mockAction)} />
-      </>
-    ),
-  };
-});
 
 import { AddTransactionSheet } from '../AddTransactionSheet';
 import {
@@ -136,13 +123,15 @@ async function renderSheet() {
 
 function pressErrorAction(renderer: TestRenderer.ReactTestRenderer) {
   act(() => {
-    renderer.root.findByProps({ testID: 'mock-error-action' }).props.onPress();
+    renderer.root.findByProps({ testID: `error-action-${mockAction}` }).props.onPress();
   });
 }
 
 beforeEach(() => {
   jest.useFakeTimers();
   mockAction = 'retry-checking';
+  mockSubscription.isPro = true;
+  mockSubscription.openPaywall.mockClear();
   (analyzeReceipt as jest.Mock).mockReset();
   (resumeReceiptAnalysis as jest.Mock).mockReset();
   (uploadReceipt as jest.Mock).mockResolvedValue('user/capture.jpg');
@@ -194,7 +183,7 @@ it('keeps rejected and failed receipts on the error card', async () => {
     }),
   );
   const rejected = await renderSheet();
-  expect(visibleText(rejected.renderer)).toContain('error:rejected');
+  expect(visibleText(rejected.renderer)).toContain('Not a receipt');
   expect(visibleText(rejected.renderer)).not.toContain('form:');
 
   (analyzeReceipt as jest.Mock).mockRejectedValueOnce(
@@ -205,7 +194,7 @@ it('keeps rejected and failed receipts on the error card', async () => {
     }),
   );
   const failed = await renderSheet();
-  expect(visibleText(failed.renderer)).toContain('error:failed');
+  expect(visibleText(failed.renderer)).toContain('Couldn’t read this receipt');
   expect(visibleText(failed.renderer)).not.toContain('form:');
 });
 
@@ -223,7 +212,7 @@ it('retries a failed job with a new request id', async () => {
   });
 
   const { renderer } = await renderSheet();
-  expect(visibleText(renderer)).toContain('error:failed');
+  expect(visibleText(renderer)).toContain('Couldn’t read this receipt');
 
   mockAction = 'try-again';
   pressErrorAction(renderer);
@@ -256,7 +245,7 @@ it('resumes at the preserved stage and shows slow-wait', async () => {
     );
   });
   await flush();
-  expect(visibleText(renderer)).toContain('error:poll');
+  expect(visibleText(renderer)).toContain('Lost connection');
 
   (resumeReceiptAnalysis as jest.Mock).mockImplementation(() => new Promise(() => {}));
   mockAction = 'retry-checking';
@@ -273,7 +262,7 @@ it('resumes at the preserved stage and shows slow-wait', async () => {
 it('routes upload errors and replacement actions', async () => {
   (uploadReceipt as jest.Mock).mockRejectedValueOnce(new Error('offline'));
   const upload = await renderSheet();
-  expect(visibleText(upload.renderer)).toContain('error:upload');
+  expect(visibleText(upload.renderer)).toContain('Couldn’t send receipt');
 
   mockAction = 'choose-photo';
   pressErrorAction(upload.renderer);
@@ -295,4 +284,59 @@ it('routes upload errors and replacement actions', async () => {
   pressErrorAction(rejected.renderer);
   await flush();
   expect(visibleText(rejected.renderer)).toContain('form:');
+});
+
+it('shows the activating message when a Pro purchase has not reached the backend', async () => {
+  mockSubscription.isPro = true;
+  (analyzeReceipt as jest.Mock).mockRejectedValueOnce(
+    new ReceiptAnalysisError('SUBSCRIPTION_REQUIRED', 'subscription required'),
+  );
+
+  const { renderer } = await renderSheet();
+  expect(visibleText(renderer)).toContain('Subscription is activating');
+  expect(
+    renderer.root.findByProps({ testID: 'error-action-try-again' }),
+  ).toBeTruthy();
+  expect(visibleText(renderer)).not.toContain('form:');
+});
+
+it('offers the paywall when a free user scans', async () => {
+  mockSubscription.isPro = false;
+  (analyzeReceipt as jest.Mock).mockRejectedValueOnce(
+    new ReceiptAnalysisError('SUBSCRIPTION_REQUIRED', 'subscription required'),
+  );
+
+  const { renderer } = await renderSheet();
+  expect(visibleText(renderer)).toContain('PrettyCash Pro required');
+  expect(visibleText(renderer)).not.toContain('form:');
+
+  mockAction = 'upgrade';
+  pressErrorAction(renderer);
+  expect(mockSubscription.openPaywall).toHaveBeenCalledTimes(1);
+});
+
+it('switches the free-user error card to activating after a purchase', async () => {
+  mockSubscription.isPro = false;
+  (analyzeReceipt as jest.Mock).mockRejectedValueOnce(
+    new ReceiptAnalysisError('SUBSCRIPTION_REQUIRED', 'subscription required'),
+  );
+
+  const { renderer, onClose, onRetake, onChoosePhoto } = await renderSheet();
+  expect(visibleText(renderer)).toContain('PrettyCash Pro required');
+
+  mockSubscription.isPro = true;
+  await act(async () => {
+    renderer.update(
+      <Sheet
+        visible
+        initialImage={image}
+        onClose={onClose}
+        onRetake={onRetake}
+        onChoosePhoto={onChoosePhoto}
+      />,
+    );
+  });
+  await flush();
+
+  expect(visibleText(renderer)).toContain('Subscription is activating');
 });

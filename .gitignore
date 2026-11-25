@@ -48,6 +48,8 @@ google-services.json
 # Firebase service account private keys
 *firebase-adminsdk*.json
 fcm-service-account*.json
+prettycashauth-*.json
+*-service-account*.json
 
 # typescript
 *.tsbuildinfo
@@ -63,6 +65,9 @@ supabase/.temp/
 temp_data/
 
 .worktrees/
+
+# Superpowers scratch workspace
+.superpowers/
 
 # Obsidian local workspace
 .obsidian/

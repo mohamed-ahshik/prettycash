@@ -19,6 +19,7 @@ interface AuthContextType {
   retrySession: () => Promise<void>;
   signInWithProvider: (provider: 'google' | 'facebook') => Promise<void>;
   signInWithEmailOtp: (email: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -122,6 +123,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const signInWithPassword = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    if (error) throw error;
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -182,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authError,
         signInWithProvider,
         signInWithEmailOtp,
+        signInWithPassword,
         signOut,
         retrySession,
       }}
